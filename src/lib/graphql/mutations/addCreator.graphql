@@ -1,0 +1,8 @@
+mutation addCreator($creator: creators_insert_input!) {
+  insert_creators_one(object: $creator) {
+    id
+    name
+    created_at
+    updated_at
+  }
+}
