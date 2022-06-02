@@ -10,6 +10,6 @@ generates:
       - "typescript"
       - "typescript-operations"
       - "typescript-graphql-request"
-  ./graphql.schema.json:
+  ./hasura-graphql.schema.json:
     plugins:
       - "introspection"
