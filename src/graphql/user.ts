@@ -72,8 +72,8 @@ export const AuthenticatedMutation = mutationField('authenticatedMutation', {
       }),
     ),
   },
-  resolve(_, args, ctx: YogaInitialContext) {
-    validateFirebaseToken(
+  async resolve(_, args, ctx: YogaInitialContext) {
+    await validateFirebaseToken(
       ctx.request.headers.get('Authorization')?.split(' ')[1],
     );
     const msg = decryptEncodedPayload(args.encryptedMessage);
