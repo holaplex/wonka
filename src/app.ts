@@ -17,6 +17,5 @@ const schema = makeSchema({
 const server = createServer({ schema, port: PORT });
 
 server.start().then(() => {
-  console.log('ENV: X ', process.env.FIREBASE_CONFIG!);
   console.log(`🎸 Ready to rock on: ${PORT}`);
 });
