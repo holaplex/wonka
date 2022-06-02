@@ -4,7 +4,7 @@ import { uuid } from 'uuidv4';
 export const CreateUserMutationResult = objectType({
   name: 'CreateUserMutationResult',
   definition(t) {
-    t.id('userId');
+    t.nonNull.id('userId');
   },
 });
 
@@ -18,6 +18,7 @@ export const CreateUserMutation = mutationField('createUser', {
     pubKeyDiffieHellman: nonNull(stringArg()),
   },
   resolve(_, args) {
+    const {} = args;
     const id = uuid();
     return {
       userId: id,
