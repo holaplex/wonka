@@ -8,19 +8,28 @@ import {
 import { YogaInitialContext } from 'graphql-yoga';
 import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
 
-import { Metaplex, keypairIdentity } from "@metaplex-foundation/js-next";
-import { Connection, clusterApiUrl, Keypair } from "@solana/web3.js";
+import { Metaplex, keypairIdentity } from '@metaplex-foundation/js-next';
+import { Connection, clusterApiUrl, Keypair } from '@solana/web3.js';
 
 export const MintNftResult = objectType({
-    name: 'MintNftResult',
-    description: 'The result for decrypting',
-    definition(t) {
-      t.nonNull.string('message', {
-        description: 'Decrypted message',
-      });
-    },
-  });
-  
+  name: 'MintNftResult',
+  description: 'The result for minting a NFT',
+  definition (t) {
+    t.nonNull.string('message', {
+      description: 'Minted NFT',
+    });
+  },
+});
+
+export const MintMetadata = inputObjectType({
+  name: 'MintMetadata',
+  description: 'The NFT metadata JSON',
+  definition (t) {
+    t.nonNull.string('json', {
+      description: 'NFT metadata JSON',
+    });
+  },
+});
 
 export const EncryptedMessage = inputObjectType({
   name: 'EncryptedMessage',
@@ -48,35 +57,55 @@ export const MintNft = mutationField('mintNft', {
         type: 'EncryptedMessage',
       }),
     ),
+    metadataJSON: nonNull(
+      arg({
+        type: 'MintMetadata',
+      }),
+    ),
   },
-  async resolve (_, args, ctx: YogaInitialContext){
+  async resolve (_, args, ctx: YogaInitialContext) {
+    const utf8Encode = new TextEncoder();
     const msg = decryptEncodedPayload(args.encryptedMessage);
-    const connection = new Connection(clusterApiUrl("mainnet-beta"));
+    const connection = new Connection(clusterApiUrl('mainnet-beta'));
+    let uri,
+      nft,
+      wallet = null;
 
-    const clientSecret = msg
+    const clientSecret = msg;
 
     // Get create wallet from the client secret
-    const wallet = new Keypair.fromSecret(clientSecret);
-
-    // Get a new metaplex object
-    const metaplex = new Metaplex(connection).use(keypairIdentity(wallet)); 
-
-    // NFT Metadata JSON object
-    const metadataJson = {
-      name: "My NFT",
-      description: "My description",
-      image: "https://arweave.net/123",
+    try {
+      wallet = Keypair.fromSecretKey(utf8Encode.encode(clientSecret));
+    } catch (e) {
+      return {
+        message: `Error creating wallet from client secret: ${e.message}`,
+      };
     }
 
-    // Upload NFT Metadata
-    const { uri } = await metaplex.nfts().uploadMetadata(metadataJson);
+    // Get a new metaplex object
+    const metaplex = new Metaplex(connection).use(keypairIdentity(wallet));
+
+    // Upload NFT Metadata, use metadata from api call, assume NFT Standard format
+    try {
+      uri = await metaplex.nfts().uploadMetadata(args.metadataJson);
+    } catch (e) {
+      return {
+        message: `Error uploading metadata: ${e.message}`,
+      };
+    }
 
     // Create New NFT with the metadata
-    const nft = await metaplex.nfts().create({uri});
+    try {
+      nft = await metaplex.nfts().create({ uri });
+    } catch (e) {
+      return {
+        message: `Error creating NFT: ${e.message}`,
+      };
+    }
 
-    // Return the NFT Object
+    // Return the NFT mint address
     return {
-        message: nft
+      message: nft.mint.publicKey.toBase58(),
     };
   },
 });
