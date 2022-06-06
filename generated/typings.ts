@@ -33,8 +33,8 @@ export interface NexusGenScalars {
 }
 
 export interface NexusGenObjects {
-  CreateUserMutationResult: { // root type
-    userId: string; // ID!
+  EncryptedMessageResult: { // root type
+    message: string; // String!
   }
   Mutation: {};
   Query: {};
@@ -51,12 +51,11 @@ export type NexusGenRootTypes = NexusGenObjects
 export type NexusGenAllTypes = NexusGenRootTypes & NexusGenScalars
 
 export interface NexusGenFieldTypes {
-  CreateUserMutationResult: { // field return type
-    userId: string; // ID!
+  EncryptedMessageResult: { // field return type
+    message: string; // String!
   }
   Mutation: { // field return type
-    authenticatedMutation: string | null; // String
-    createUser: NexusGenRootTypes['CreateUserMutationResult'] | null; // CreateUserMutationResult
+    authenticatedMutation: NexusGenRootTypes['EncryptedMessageResult'] | null; // EncryptedMessageResult
   }
   Query: { // field return type
     ok: boolean; // Boolean!
@@ -64,12 +63,11 @@ export interface NexusGenFieldTypes {
 }
 
 export interface NexusGenFieldTypeNames {
-  CreateUserMutationResult: { // field return type name
-    userId: 'ID'
+  EncryptedMessageResult: { // field return type name
+    message: 'String'
   }
   Mutation: { // field return type name
-    authenticatedMutation: 'String'
-    createUser: 'CreateUserMutationResult'
+    authenticatedMutation: 'EncryptedMessageResult'
   }
   Query: { // field return type name
     ok: 'Boolean'
@@ -80,13 +78,6 @@ export interface NexusGenArgTypes {
   Mutation: {
     authenticatedMutation: { // args
       encryptedMessage: NexusGenInputs['EncryptedMessage']; // EncryptedMessage!
-    }
-    createUser: { // args
-      displayName: string; // String!
-      email: string; // String!
-      password: string; // String!
-      photoURL?: string | null; // String
-      repeatPassword: string; // String!
     }
   }
 }

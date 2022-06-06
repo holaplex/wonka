@@ -2,10 +2,6 @@
 ### Do not make changes to this file directly
 
 
-type CreateUserMutationResult {
-  userId: ID!
-}
-
 """
 This is the input of an encrypted message, using public-key authenticated encryption to Encrypt and decrypt messages between sender and receiver using elliptic curve Diffie-Hellman key exchange.
 """
@@ -20,9 +16,14 @@ input EncryptedMessage {
   nonce: String!
 }
 
+"""The result for decrypting"""
+type EncryptedMessageResult {
+  """Decrypted message"""
+  message: String!
+}
+
 type Mutation {
-  authenticatedMutation(encryptedMessage: EncryptedMessage!): String
-  createUser(displayName: String!, email: String!, password: String!, photoURL: String, repeatPassword: String!): CreateUserMutationResult
+  authenticatedMutation(encryptedMessage: EncryptedMessage!): EncryptedMessageResult
 }
 
 type Query {

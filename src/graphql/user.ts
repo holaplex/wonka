@@ -1,47 +1,21 @@
 import {
   nonNull,
-  objectType,
   inputObjectType,
   mutationField,
-  stringArg,
   arg,
+  objectType,
 } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
 
-import { firebaseAdmin } from '../lib/firebase/admin.js';
-import { validateFirebaseToken } from '../lib/firebase/utils.js';
 import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
 
-const adminAuth = firebaseAdmin.auth();
-
-export const CreateUserMutationResult = objectType({
-  name: 'CreateUserMutationResult',
+export const EncryptedMessageResult = objectType({
+  name: 'EncryptedMessageResult',
+  description: 'The result for decrypting',
   definition(t) {
-    t.nonNull.id('userId');
-  },
-});
-
-export const CreateUserMutation = mutationField('createUser', {
-  type: 'CreateUserMutationResult',
-  args: {
-    email: nonNull(stringArg()),
-    password: nonNull(stringArg()),
-    repeatPassword: nonNull(stringArg()),
-    displayName: nonNull(stringArg()),
-    photoURL: stringArg(),
-  },
-  async resolve(_, args) {
-    const { email, password, repeatPassword, displayName, photoURL } = args;
-    if (password !== repeatPassword) {
-      throw new Error('Invalid credentials');
-    }
-    const userRecord = await adminAuth.createUser({
-      email,
-      password,
-      displayName,
-      photoURL,
+    t.nonNull.string('message', {
+      description: 'Decrypted message',
     });
-    return { userId: userRecord.uid };
   },
 });
 
@@ -64,7 +38,7 @@ export const EncryptedMessage = inputObjectType({
 
 // This is a placeholder and an example
 export const AuthenticatedMutation = mutationField('authenticatedMutation', {
-  type: 'String',
+  type: 'EncryptedMessageResult',
   args: {
     encryptedMessage: nonNull(
       arg({
@@ -73,10 +47,9 @@ export const AuthenticatedMutation = mutationField('authenticatedMutation', {
     ),
   },
   async resolve(_, args, ctx: YogaInitialContext) {
-    await validateFirebaseToken(
-      ctx.request.headers.get('Authorization')?.split(' ')[1],
-    );
     const msg = decryptEncodedPayload(args.encryptedMessage);
-    return msg;
+    return {
+      message: msg
+    };
   },
 });
