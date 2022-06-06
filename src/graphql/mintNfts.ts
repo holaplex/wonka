@@ -16,7 +16,7 @@ export const MintNftResult = objectType({
   description: 'The result for minting a NFT',
   definition (t) {
     t.nonNull.string('message', {
-      description: 'Minted NFT',
+      description: 'Mint hash of newly minted NFT',
     });
   },
 });
@@ -25,7 +25,7 @@ export const MintMetadata = inputObjectType({
   name: 'MintMetadata',
   description: 'The NFT metadata JSON',
   definition (t) {
-    t.nonNull.string('json', {
+    t.nonNull.string('metadataJson', {
       description: 'NFT metadata JSON',
     });
   },
@@ -48,7 +48,6 @@ export const EncryptedMessage = inputObjectType({
   },
 });
 
-// This is a placeholder and an example
 export const MintNft = mutationField('mintNft', {
   type: 'MintNftResult',
   args: {
