@@ -9,7 +9,7 @@ import { YogaInitialContext } from 'graphql-yoga';
 import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
 
 import { Metaplex, keypairIdentity } from "@metaplex-foundation/js-next";
-import { Connection, clusterApiUrl } from "@solana/web3.js";
+import { Connection, clusterApiUrl, Keypair } from "@solana/web3.js";
 
 export const MintNftResult = objectType({
     name: 'MintNftResult',
@@ -49,21 +49,32 @@ export const MintNft = mutationField('mintNft', {
       }),
     ),
   },
-  async resolve (_, args, ctx: YogaInitialContext) {
+  async resolve (_, args, ctx: YogaInitialContext){
     const msg = decryptEncodedPayload(args.encryptedMessage);
     const connection = new Connection(clusterApiUrl("mainnet-beta"));
-    const metaplex = new Metaplex(connection).use(keypairIdentity(wallet));
 
+    const clientSecret = msg
+
+    // Get create wallet from the client secret
+    const wallet = new Keypair.fromSecret(clientSecret);
+
+    // Get a new metaplex object
+    const metaplex = new Metaplex(connection).use(keypairIdentity(wallet)); 
+
+    // NFT Metadata JSON object
     const metadataJson = {
       name: "My NFT",
       description: "My description",
       image: "https://arweave.net/123",
     }
 
+    // Upload NFT Metadata
     const { uri } = await metaplex.nfts().uploadMetadata(metadataJson);
 
+    // Create New NFT with the metadata
     const nft = await metaplex.nfts().create({uri});
 
+    // Return the NFT Object
     return {
         message: nft
     };
