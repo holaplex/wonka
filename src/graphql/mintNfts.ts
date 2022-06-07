@@ -4,7 +4,6 @@ import {
   mutationField,
   arg,
   objectType,
-  extendType,
   extendInputType,
 } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
@@ -12,7 +11,6 @@ import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
 
 import { Metaplex, keypairIdentity } from '@metaplex-foundation/js-next';
 import { Connection, clusterApiUrl, Keypair } from '@solana/web3.js';
-import { EncryptedMessage } from './user.js';
 
 export const MintNftResult = objectType({
   name: 'MintNftResult',
