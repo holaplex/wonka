@@ -63,7 +63,7 @@ export const NftProperties = extendInputType({
       type: 'String',
       description: 'Category of the NFT',
     });
-    t.list.field('NftFiles', {
+    t.list.field('files', {
       type: 'NftFile',
       description: 'Files associated with the NFT',
     });
