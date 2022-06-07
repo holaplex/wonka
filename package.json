@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.36.0",
-    "@bundlr-network/client": "^0.5.18",
+    "@bundlr-network/client": "^0.5.18", 
     "@metaplex-foundation/mpl-token-metadata": "1.2.5",
     "@metaplex/arweave-cost": "^1.0.4",
     "@nftstorage/metaplex-auth": "^1.2.0",
@@ -67,6 +67,7 @@
     "@types/webgl2": "^0.0.6",
     "jest": "^27.4.5",
     "rimraf": "^3.0.2",
+    "ts-node-dev": "^2.0.0",
     "typescript": "^4.3.5"
   }
 }

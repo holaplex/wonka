@@ -19,7 +19,7 @@
     "types": ["jest", "node", "webgl2"],
     "skipLibCheck": true
   },
-  "exclude": ["node_modules", "typings/browser", "typings/browser.d.ts", "cli"],
+  "exclude": ["node_modules", "typings/browser", "typings/browser.d.ts"],
   "atom": {
     "rewriteTsconfig": false
   }

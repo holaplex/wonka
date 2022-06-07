@@ -33,6 +33,9 @@ export interface NexusGenScalars {
 }
 
 export interface NexusGenObjects {
+  CandyMachineUploadResult: { // root type
+    processId: string; // String!
+  }
   EncryptedMessageResult: { // root type
     message: string; // String!
   }
@@ -51,11 +54,15 @@ export type NexusGenRootTypes = NexusGenObjects
 export type NexusGenAllTypes = NexusGenRootTypes & NexusGenScalars
 
 export interface NexusGenFieldTypes {
+  CandyMachineUploadResult: { // field return type
+    processId: string; // String!
+  }
   EncryptedMessageResult: { // field return type
     message: string; // String!
   }
   Mutation: { // field return type
     authenticatedMutation: NexusGenRootTypes['EncryptedMessageResult'] | null; // EncryptedMessageResult
+    candyMachineUpload: NexusGenRootTypes['CandyMachineUploadResult'] | null; // CandyMachineUploadResult
   }
   Query: { // field return type
     ok: boolean; // Boolean!
@@ -63,11 +70,15 @@ export interface NexusGenFieldTypes {
 }
 
 export interface NexusGenFieldTypeNames {
+  CandyMachineUploadResult: { // field return type name
+    processId: 'String'
+  }
   EncryptedMessageResult: { // field return type name
     message: 'String'
   }
   Mutation: { // field return type name
     authenticatedMutation: 'EncryptedMessageResult'
+    candyMachineUpload: 'CandyMachineUploadResult'
   }
   Query: { // field return type name
     ok: 'Boolean'
@@ -77,6 +88,9 @@ export interface NexusGenFieldTypeNames {
 export interface NexusGenArgTypes {
   Mutation: {
     authenticatedMutation: { // args
+      encryptedMessage: NexusGenInputs['EncryptedMessage']; // EncryptedMessage!
+    }
+    candyMachineUpload: { // args
       encryptedMessage: NexusGenInputs['EncryptedMessage']; // EncryptedMessage!
     }
   }

@@ -2,6 +2,12 @@
 ### Do not make changes to this file directly
 
 
+"""Result from calling candy machine upload"""
+type CandyMachineUploadResult {
+  """Process id handle"""
+  processId: String!
+}
+
 """
 This is the input of an encrypted message, using public-key authenticated encryption to Encrypt and decrypt messages between sender and receiver using elliptic curve Diffie-Hellman key exchange.
 """
@@ -24,6 +30,7 @@ type EncryptedMessageResult {
 
 type Mutation {
   authenticatedMutation(encryptedMessage: EncryptedMessage!): EncryptedMessageResult
+  candyMachineUpload(encryptedMessage: EncryptedMessage!): CandyMachineUploadResult
 }
 
 type Query {
