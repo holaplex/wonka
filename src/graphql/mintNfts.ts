@@ -109,7 +109,7 @@ export const MintNft = mutationField('mintNft', {
         type: 'EncryptedMessage',
       }),
     ),
-    metadataJSON: nonNull(
+    nftMetadata: nonNull(
       arg({
         type: 'NftMetadata',
       }),
@@ -139,7 +139,7 @@ export const MintNft = mutationField('mintNft', {
 
     // Upload NFT Metadata, use metadata from api call, assume NFT Standard format
     try {
-      uri = await metaplex.nfts().uploadMetadata(args.NftMetadata);
+      uri = await metaplex.nfts().uploadMetadata(args.nftMetadata);
     } catch (e) {
       return {
         message: `Error uploading metadata: ${e.message}`,
