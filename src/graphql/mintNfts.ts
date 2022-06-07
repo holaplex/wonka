@@ -49,6 +49,10 @@ export const NftFile = extendInputType({
       type: 'String',
       description: 'Type of the file',
     });
+    t.field('cdn', {
+      type: 'Boolean',
+      description: 'Whether the file is hosted on the CDN',
+    });
   },
 });
 
