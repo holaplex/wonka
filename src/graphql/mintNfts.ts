@@ -4,12 +4,15 @@ import {
   mutationField,
   arg,
   objectType,
+  extendType,
+  extendInputType,
 } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
 import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
 
 import { Metaplex, keypairIdentity } from '@metaplex-foundation/js-next';
 import { Connection, clusterApiUrl, Keypair } from '@solana/web3.js';
+import { EncryptedMessage } from './user.js';
 
 export const MintNftResult = objectType({
   name: 'MintNftResult',
@@ -21,29 +24,77 @@ export const MintNftResult = objectType({
   },
 });
 
-export const MintMetadata = inputObjectType({
-  name: 'MintMetadata',
-  description: 'The NFT metadata JSON',
+export const NftAttribute = extendInputType({
+  type: 'NftAttribute',
   definition (t) {
-    t.nonNull.string('metadataJson', {
-      description: 'NFT metadata JSON',
+    t.field('trait_type', {
+      type: 'String',
+      description: 'Name of the attribute',
+    });
+    t.field('value', {
+      type: 'String',
+      description: 'Value of the attribute',
     });
   },
 });
 
-export const EncryptedMessage = inputObjectType({
-  name: 'EncryptedMessage',
-  description:
-    'This is the input of an encrypted message, using public-key authenticated encryption to Encrypt and decrypt messages between sender and receiver using elliptic curve Diffie-Hellman key exchange.',
+export const NftFile = extendInputType({
+  type: 'NftFile',
   definition (t) {
-    t.nonNull.string('boxedMessage', {
-      description: 'Base58 Encoded Box',
+    t.field('uri', {
+      type: 'String',
+      description: 'URI of the file',
     });
-    t.nonNull.string('nonce', {
-      description: 'Base58 Encoded nonce used for boxing the message',
+    t.field('type', {
+      type: 'String',
+      description: 'Type of the file',
     });
-    t.nonNull.string('clientPublicKey', {
-      description: 'Base58 Encoded Client public key used to box the message',
+  },
+});
+
+export const NftProperties = extendInputType({
+  type: 'NftProperties',
+  definition (t) {
+    t.field('category', {
+      type: 'String',
+      description: 'Category of the NFT',
+    });
+    t.list.field('NftFiles', {
+      type: 'NftFile',
+      description: 'Files associated with the NFT',
+    });
+  },
+});
+
+export const NftMetadata = inputObjectType({
+  name: 'NftMetadata',
+  description: 'Metadata for a NFT',
+  definition (t) {
+    t.nonNull.string('name', {
+      description: 'Name of the NFT',
+    });
+    t.nonNull.string('symbol', {
+      description: 'Symbol of the NFT',
+    });
+    t.nonNull.string('description', {
+      description: 'Description of the NFT',
+    });
+    t.nonNull.string('image', {
+      description: 'Image of the NFT',
+    });
+    t.nonNull.string('animation_url', {
+      description: 'Animation URL of the NFT',
+    });
+    t.nonNull.string('external_url', {
+      description: 'External URL of the NFT',
+    });
+    t.list.field('attributes', {
+      type: 'NftAttribute',
+      description: 'Metadata for the NFT',
+    });
+    t.field('properties', {
+      type: 'NftProperties',
+      description: 'Properties of the NFT',
     });
   },
 });
@@ -58,23 +109,23 @@ export const MintNft = mutationField('mintNft', {
     ),
     metadataJSON: nonNull(
       arg({
-        type: 'MintMetadata',
+        type: 'NftMetadata',
       }),
     ),
   },
   async resolve (_, args, ctx: YogaInitialContext) {
-    const utf8Encode = new TextEncoder();
-    const msg = decryptEncodedPayload(args.encryptedMessage);
     const connection = new Connection(clusterApiUrl('mainnet-beta'));
     let uri,
       nft,
       wallet = null;
 
-    const clientSecret = msg;
+    const keyPairBytes = JSON.parse(
+      decryptEncodedPayload(args.encryptedMessage),
+    ) as number[];
 
-    // Get create wallet from the client secret
+    // Get create wallet from the client secrets
     try {
-      wallet = Keypair.fromSecretKey(utf8Encode.encode(clientSecret));
+      wallet = Keypair.fromSecretKey(Uint8Array.from(keyPairBytes));
     } catch (e) {
       return {
         message: `Error creating wallet from client secret: ${e.message}`,
@@ -86,7 +137,7 @@ export const MintNft = mutationField('mintNft', {
 
     // Upload NFT Metadata, use metadata from api call, assume NFT Standard format
     try {
-      uri = await metaplex.nfts().uploadMetadata(args.metadataJson);
+      uri = await metaplex.nfts().uploadMetadata(args.NftMetadata);
     } catch (e) {
       return {
         message: `Error uploading metadata: ${e.message}`,
