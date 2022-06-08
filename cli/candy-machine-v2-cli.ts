@@ -182,6 +182,7 @@ programCommand('upload')
         'Path to Arweave JWK wallet file (--arweave-jwk) must be provided when using arweave-bundle',
       );
     }
+
     if (
       storage === StorageType.Ipfs &&
       (!ipfsInfuraProjectId || !ipfsInfuraSecret)
@@ -190,6 +191,7 @@ programCommand('upload')
         'IPFS selected as storage option but Infura project id or secret key were not provided.',
       );
     }
+
     if (storage === StorageType.Aws && !awsS3Bucket) {
       throw new Error(
         'aws selected as storage option but existing bucket name (--aws-s3-bucket) not provided.',
@@ -203,6 +205,7 @@ programCommand('upload')
         )}. Got: ${storage}`,
       );
     }
+    
     const ipfsCredentials = {
       projectId: ipfsInfuraProjectId,
       secretKey: ipfsInfuraSecret,
