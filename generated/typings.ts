@@ -4,9 +4,23 @@
  */
 
 
-
-
-
+import type { core } from "nexus"
+declare global {
+  interface NexusGenCustomInputMethods<TypeName extends string> {
+    /**
+     * The `Upload` scalar type represents a file upload.
+     */
+    upload<FieldName extends string>(fieldName: FieldName, opts?: core.CommonInputFieldConfig<TypeName, FieldName>): void // "Upload";
+  }
+}
+declare global {
+  interface NexusGenCustomOutputMethods<TypeName extends string> {
+    /**
+     * The `Upload` scalar type represents a file upload.
+     */
+    upload<FieldName extends string>(fieldName: FieldName, ...opts: core.ScalarOutSpread<TypeName, FieldName>): void // "Upload";
+  }
+}
 
 
 declare global {
@@ -53,6 +67,7 @@ export interface NexusGenScalars {
   Float: number
   Boolean: boolean
   ID: string
+  Upload: File
 }
 
 export interface NexusGenObjects {
@@ -67,6 +82,9 @@ export interface NexusGenObjects {
   }
   Mutation: {};
   Query: {};
+  UploadFileResult: { // root type
+    message: string; // String!
+  }
 }
 
 export interface NexusGenInterfaces {
@@ -93,9 +111,13 @@ export interface NexusGenFieldTypes {
     authenticatedMutation: NexusGenRootTypes['EncryptedMessageResult'] | null; // EncryptedMessageResult
     candyMachineUpload: NexusGenRootTypes['CandyMachineUploadResult'] | null; // CandyMachineUploadResult
     mintNft: NexusGenRootTypes['MintNftResult'] | null; // MintNftResult
+    uploadFile: NexusGenRootTypes['UploadFileResult'] | null; // UploadFileResult
   }
   Query: { // field return type
     ok: boolean; // Boolean!
+  }
+  UploadFileResult: { // field return type
+    message: string; // String!
   }
 }
 
@@ -113,9 +135,13 @@ export interface NexusGenFieldTypeNames {
     authenticatedMutation: 'EncryptedMessageResult'
     candyMachineUpload: 'CandyMachineUploadResult'
     mintNft: 'MintNftResult'
+    uploadFile: 'UploadFileResult'
   }
   Query: { // field return type name
     ok: 'Boolean'
+  }
+  UploadFileResult: { // field return type name
+    message: 'String'
   }
 }
 
@@ -130,6 +156,9 @@ export interface NexusGenArgTypes {
     mintNft: { // args
       encryptedMessage: NexusGenInputs['EncryptedMessage']; // EncryptedMessage!
       nftMetadata: NexusGenInputs['NftMetadata']; // NftMetadata!
+    }
+    uploadFile: { // args
+      file: NexusGenScalars['Upload']; // Upload!
     }
   }
 }

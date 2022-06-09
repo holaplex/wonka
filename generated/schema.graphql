@@ -38,6 +38,7 @@ type Mutation {
   authenticatedMutation(encryptedMessage: EncryptedMessage!): EncryptedMessageResult
   candyMachineUpload(encryptedKeypair: EncryptedMessage!): CandyMachineUploadResult
   mintNft(encryptedMessage: EncryptedMessage!, nftMetadata: NftMetadata!): MintNftResult
+  uploadFile(file: Upload!): UploadFileResult
 }
 
 input NftAttribute {
@@ -96,4 +97,13 @@ input NftProperties {
 
 type Query {
   ok: Boolean!
+}
+
+"""The `Upload` scalar type represents a file upload."""
+scalar Upload
+
+"""The result for uploading a file"""
+type UploadFileResult {
+  """Upload URL of the file"""
+  message: String!
 }
