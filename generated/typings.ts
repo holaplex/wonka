@@ -53,6 +53,7 @@ export interface NexusGenScalars {
   Float: number
   Boolean: boolean
   ID: string
+  JSON: any
 }
 
 export interface NexusGenObjects {
@@ -125,7 +126,11 @@ export interface NexusGenArgTypes {
       encryptedMessage: NexusGenInputs['EncryptedMessage']; // EncryptedMessage!
     }
     candyMachineUpload: { // args
+      collectionMint: string; // String!
+      config: NexusGenScalars['JSON']; // JSON!
       encryptedKeypair: NexusGenInputs['EncryptedMessage']; // EncryptedMessage!
+      filesZipUrl: string; // String!
+      setCollectionMint: boolean; // Boolean!
     }
     mintNft: { // args
       encryptedMessage: NexusGenInputs['EncryptedMessage']; // EncryptedMessage!

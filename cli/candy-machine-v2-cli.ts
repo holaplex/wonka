@@ -3,6 +3,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { InvalidArgumentError, program } from 'commander';
 import * as anchor from '@project-serum/anchor';
+import log from 'loglevel';
+import { getType } from 'mime';
 
 import {
   chunks,
@@ -38,11 +40,9 @@ import {
   signAllMetadataFromCandyMachine,
 } from './commands/signAll';
 import { getOwnersByMintAddresses } from './commands/owners';
-import log from 'loglevel';
 import { withdrawV2 } from './commands/withdraw';
 import { updateFromCache } from './commands/updateFromCache';
 import { StorageType } from './helpers/storage-type';
-import { getType } from 'mime';
 import { removeCollection } from './commands/remove-collection';
 import { setCollection } from './commands/set-collection';
 import { withdrawBundlr } from './helpers/upload/arweave-bundle';

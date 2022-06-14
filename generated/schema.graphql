@@ -28,6 +28,8 @@ type EncryptedMessageResult {
   message: String!
 }
 
+scalar JSON
+
 """The result for minting a NFT"""
 type MintNftResult {
   """Mint hash of newly minted NFT"""
@@ -36,7 +38,20 @@ type MintNftResult {
 
 type Mutation {
   authenticatedMutation(encryptedMessage: EncryptedMessage!): EncryptedMessageResult
-  candyMachineUpload(encryptedKeypair: EncryptedMessage!): CandyMachineUploadResult
+  candyMachineUpload(
+    """Collection mint pubkey"""
+    collectionMint: String!
+
+    """Candy machine configuration"""
+    config: JSON!
+    encryptedKeypair: EncryptedMessage!
+
+    """Zip file url with the assets"""
+    filesZipUrl: String!
+
+    """Set collection mint pubkey"""
+    setCollectionMint: Boolean!
+  ): CandyMachineUploadResult
   mintNft(encryptedMessage: EncryptedMessage!, nftMetadata: NftMetadata!): MintNftResult
 }
 

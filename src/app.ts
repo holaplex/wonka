@@ -1,6 +1,5 @@
 import { makeSchema } from 'nexus';
 import { createServer } from 'graphql-yoga';
-
 import * as graphqlTypes from './graphql';
 
 import path from 'path';
