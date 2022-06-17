@@ -1,7 +1,7 @@
 import { nonNull, mutationField, arg, objectType, scalarType } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
 import { NFTStorage } from 'nft.storage';
-import fs from 'fs';
+import { createReadStream, createWriteStream, unlink } from 'fs';
 export const fromDwebLink = (cid: string): string =>
   `https://${cid}.ipfs.dweb.link`;
 
@@ -22,44 +22,32 @@ export const UploadScalar = scalarType({
   sourceType: 'File',
 });
 
+export const FileScalar = scalarType({
+  name: 'File',
+  asNexusMethod: 'file',
+  description: 'The `File` scalar type represents a file upload.',
+  sourceType: 'File',
+});
+
 export const UploadFile = mutationField('uploadFile', {
   type: 'UploadFileResult',
   args: { file: nonNull(arg({ type: 'Upload' })) },
-  async resolve (_, args, ctx: YogaInitialContext) {
-    
+  async resolve (_, { file }, ctx: YogaInitialContext) {
     const nftstorage = new NFTStorage({
-      token: process.env.NFT_STORAGE_API_KEY,
+      token: '',
     });
-    let data = '';
-    
-    const stream = await args.file.stream();
-    console.log(stream)
-    return {
-      message: "ok"
+
+    const fileBlob = await file.slice();
+    let cid = '';
+    try {
+      cid = await nftstorage.storeBlob(fileBlob);
+    } catch (err) {
+      return {
+        message: `Error: ${err.message}`,
+      };
     }
-
-
-    // const resolveStream = new Promise((resolve, reject) => {
-    //   stream.on('data', (chunk) => {
-    //     data += chunk;
-    //   });
-
-    //   stream.on('end', async () => {
-    //     console.log("about to upload file")
-    //     const cid = await nftstorage.storeBlob(new Blob([data]));
-    //     resolve(fromDwebLink(cid));
-    //   });
-    //   stream.on('error', (e) => {
-    //     reject(e);
-    //   });
-    // });
-    
-    // resolveStream
-    //   .then((url) => {
-    //     return { message: url };
-    //   })
-    //   .catch((e) => {
-    //     return { message: `Error: ${e.message}` };
-    //   });
+    return {
+      message: fromDwebLink(cid),
+    };
   },
 });
