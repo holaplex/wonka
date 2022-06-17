@@ -46,10 +46,9 @@ export const AuthenticatedMutation = mutationField('authenticatedMutation', {
       }),
     ),
   },
-  async resolve(_, args, ctx: YogaInitialContext) {
-    const msg = decryptEncodedPayload(args.encryptedMessage);
+  async resolve(_, { encryptedMessage }) {
     return {
-      message: msg
+      message: decryptEncodedPayload(encryptedMessage),
     };
   },
 });

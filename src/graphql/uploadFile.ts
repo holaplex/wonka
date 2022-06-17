@@ -22,13 +22,6 @@ export const UploadScalar = scalarType({
   sourceType: 'File',
 });
 
-export const FileScalar = scalarType({
-  name: 'File',
-  asNexusMethod: 'file',
-  description: 'The `File` scalar type represents a file upload.',
-  sourceType: 'File',
-});
-
 export const UploadFile = mutationField('uploadFile', {
   type: 'UploadFileResult',
   args: { file: nonNull(arg({ type: 'Upload' })) },

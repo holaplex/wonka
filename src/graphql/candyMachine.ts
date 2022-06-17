@@ -1,11 +1,25 @@
-import { arg, mutationField, nonNull, objectType } from 'nexus';
+import { arg, mutationField, nonNull, objectType, stringArg, booleanArg } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
 import { web3 } from '@project-serum/anchor';
+import { uuid as uuidv4 } from 'uuidv4';
+import path from 'path';
+import fs from 'fs/promises';
+import rimraf from 'rimraf';
+import { getType } from 'mime';
 
+import { uploadV2 } from '../../cli/commands/upload.js';
 import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
 import { loadCandyProgramV2 } from '../../cli/helpers/accounts.js';
-import { getCandyMachineV2ConfigFromPayload } from '../../cli/helpers/various.js';
+import {
+  getCandyMachineV2ConfigFromPayload,
+  parseCollectionMintPubkey,
+} from '../../cli/helpers/various.js';
 import { StorageType } from '../../cli/helpers/storage-type.js';
+import { download } from '../lib/helpers/downloadFile.js';
+import { unzip } from '../lib/helpers/unZipFile.js';
+import { EXTENSION_JSON } from '../../cli/helpers/constants.js';
+
+const dirname = path.resolve(); // Only works if type=module on newer nodejs versions.
 
 export const CandyMachineUploadResult = objectType({
   name: 'CandyMachineUploadResult',
@@ -25,8 +39,33 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         type: 'EncryptedMessage',
       }),
     ),
+    config: nonNull(
+      arg({
+        type: 'JSON',
+        description: 'Candy machine configuration',
+      }),
+    ),
+    collectionMint: nonNull(
+      stringArg({
+        description: 'Collection mint pubkey',
+      }),
+    ),
+    setCollectionMint: nonNull(
+      booleanArg({
+        description: 'Set collection mint pubkey',
+      }),
+    ),
+    filesZipUrl: nonNull(
+      stringArg({
+        description: 'Zip file url with the assets',
+      }),
+    ),
   },
   async resolve(_, args, ctx: YogaInitialContext) {
+    const { collectionMint: collectionMintParam, setCollectionMint, filesZipUrl, config } = args;
+    const collectionMint = new web3.PublicKey(collectionMintParam);
+    const processId = uuidv4();
+
     const env = process.env.SOLANA_ENV!;
 
     const keyPairBytes = JSON.parse(
@@ -43,8 +82,7 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
       process.env.RPC_URL!,
     );
 
-    // READ FROM ARGS
-    const config = {} as any;
+
     const {
       storage,
       nftStorageKey,
@@ -130,8 +168,109 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
     let animationFileCount = 0;
     let jsonFileCount = 0;
 
+    const zipFile = `${dirname}/${processId}/files.zip`;
+    await download(filesZipUrl, zipFile);
+    const zipFilesDir = `${dirname}/${processId}/files`;
+    await unzip(zipFile, zipFilesDir);
+    const files = await fs.readdir(zipFilesDir);
+
+    const supportedImageTypes = {
+      'image/png': 1,
+      'image/gif': 1,
+      'image/jpeg': 1,
+    };
+    const supportedAnimationTypes = {
+      'video/mp4': 1,
+      'video/quicktime': 1,
+      'audio/mpeg': 1,
+      'audio/x-flac': 1,
+      'audio/wav': 1,
+      'model/gltf-binary': 1,
+      'text/html': 1,
+    };
+
+    const supportedFiles = files.filter((it) => {
+      if (supportedImageTypes[getType(it)]) {
+        imageFileCount++;
+      } else if (supportedAnimationTypes[getType(it)]) {
+        animationFileCount++;
+      } else if (it.endsWith(EXTENSION_JSON)) {
+        jsonFileCount++;
+      } else {
+        return false;
+      }
+
+      return true;
+    });
+
+    if (animationFileCount !== 0 && storage === StorageType.Arweave) {
+      throw new Error(
+        'The "arweave" storage option is incompatible with animation files. Please try again with another storage option using `--storage <option>`.',
+      );
+    }
+
+    if (animationFileCount !== 0 && animationFileCount !== jsonFileCount) {
+      throw new Error(
+        `number of animation files (${animationFileCount}) is different than the number of json files (${jsonFileCount})`,
+      );
+    } else if (imageFileCount !== jsonFileCount) {
+      throw new Error(
+        `number of img files (${imageFileCount}) is different than the number of json files (${jsonFileCount})`,
+      );
+    }
+
+    const elemCount = number ? number : imageFileCount;
+    if (elemCount < imageFileCount) {
+      throw new Error(
+        `max number (${elemCount}) cannot be smaller than the number of images in the source folder (${imageFileCount})`,
+      );
+    }
+
+    const collectionMintPubkey = await parseCollectionMintPubkey(
+      collectionMint,
+      anchorProgram.provider.connection,
+      walletKeyPair,
+    );
+
+    try {
+      await uploadV2({
+        files: supportedFiles,
+        cacheName: processId,
+        env: process.env.RPC_URL! as any,
+        totalNFTs: elemCount,
+        gatekeeper,
+        storage,
+        retainAuthority,
+        mutable,
+        nftStorageKey,
+        nftStorageGateway,
+        ipfsCredentials,
+        pinataJwt,
+        pinataGateway,
+        awsS3Bucket,
+        batchSize,
+        price,
+        treasuryWallet,
+        anchorProgram,
+        walletKeyPair,
+        splToken,
+        endSettings,
+        hiddenSettings,
+        whitelistMintSettings,
+        goLiveDate,
+        uuid,
+        arweaveJwk,
+        rateLimit: 5 /* prob 10 */,
+        collectionMintPubkey,
+        setCollectionMint,
+        rpcUrl: process.env.RPC_URL!,
+      });
+    } catch (err) {
+      throw err;
+    }
+
     return {
-      processId: 'null',
+      processId,
     };
   },
 });
