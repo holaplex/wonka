@@ -34,11 +34,19 @@ export const UploadFile = mutationField('uploadFile', {
   args: { file: nonNull(arg({ type: 'Upload' })) },
   async resolve (_, { file }, ctx: YogaInitialContext) {
     const nftstorage = new NFTStorage({
-      token: '',
+      token: '', // TODO: get token from ????
     });
+    let fileBlob,
+      cid = '';
 
-    const fileBlob = await file.slice();
-    let cid = '';
+    try {
+      fileBlob = await file.slice();
+    } catch (err) {
+      return {
+        message: `Error: {err.message}`,
+      };
+    }
+
     try {
       cid = await nftstorage.storeBlob(fileBlob);
     } catch (err) {
@@ -46,6 +54,7 @@ export const UploadFile = mutationField('uploadFile', {
         message: `Error: ${err.message}`,
       };
     }
+
     return {
       message: fromDwebLink(cid),
     };
