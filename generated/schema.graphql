@@ -28,6 +28,9 @@ type EncryptedMessageResult {
   message: String!
 }
 
+"""The `File` scalar type represents a file upload."""
+scalar File
+
 """The result for minting a NFT"""
 type MintNftResult {
   """Mint hash of newly minted NFT"""
@@ -37,7 +40,7 @@ type MintNftResult {
 type Mutation {
   authenticatedMutation(encryptedMessage: EncryptedMessage!): EncryptedMessageResult
   candyMachineUpload(encryptedKeypair: EncryptedMessage!): CandyMachineUploadResult
-  mintNft(encryptedMessage: EncryptedMessage!, nftMetadata: NftMetadata!): MintNftResult
+  mintNft(encryptedMessage: EncryptedMessage!, nftMetadata: NftMetadata, nftMetadataJSON: File): MintNftResult
 }
 
 input NftAttribute {

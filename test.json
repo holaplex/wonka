@@ -1,0 +1,46 @@
+{
+	"name":"The Monkeez #1860",
+	"symbol":"TMKEZ","description":
+	"SolMonkeez GEN 2 ",
+	"seller_fee_basis_points":1000,
+	"image":"https://www.arweave.net/k-V5UsjAN9QtbvhYHfx5N01oYD4pLWKwF6PMNW5ZThkext=png",
+	"external_url":"https://www.solmonkeez.com",
+	"edition":1860,"attributes":
+    [{
+		"trait_type":"Background",
+		"value":"3"
+	},
+	{
+		"trait_type":"body",
+        "value":"Gold"
+    },
+    {
+        "trait_type":"Head",
+        "value":"None"
+    },
+    {
+        "trait_type":"Eyes",
+        "value":"Surprised"
+    },
+    {
+        "trait_type":"Armor",
+        "value":"None"
+    },
+    {
+        "trait_type":"Mouth",
+        "value":"None"
+    }],
+    "properties":
+    {
+        "files":
+        [{
+            "uri":"https://www.arweave.net/k-V5UsjAN9QtbvhYHfx5N01oYD4pLWKwF6PMNW5ZThk?ext=png",
+            "type":"image/png"
+        }],
+        "category":"image",
+        "creators":
+        [{
+            "address":"A3CG3dvxkXZL1ouaRwUEP5x7V5MqumqGxVTEF3oHqqyR","share":100
+        }]
+    }
+}
