@@ -1,13 +1,22 @@
-import { arg, mutationField, nonNull, objectType, stringArg, booleanArg } from 'nexus';
+import {
+  arg,
+  mutationField,
+  nonNull,
+  objectType,
+  stringArg,
+  booleanArg,
+  queryField,
+} from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
 import { web3 } from '@project-serum/anchor';
 import { uuid as uuidv4 } from 'uuidv4';
 import path from 'path';
 import fs from 'fs/promises';
-import rimraf from 'rimraf';
 import { getType } from 'mime';
+import rimraf from 'rimraf';
+import winston from 'winston';
 
-import { uploadV2 } from '../../cli/commands/upload.js';
+import { uploadV2 } from '../../cli/commands/upload-logged.js';
 import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
 import { loadCandyProgramV2 } from '../../cli/helpers/accounts.js';
 import {
@@ -19,55 +28,36 @@ import { download } from '../lib/helpers/downloadFile.js';
 import { unzip } from '../lib/helpers/unZipFile.js';
 import { EXTENSION_JSON } from '../../cli/helpers/constants.js';
 
-const dirname = path.resolve(); // Only works if type=module on newer nodejs versions.
+const dirname = path.resolve();
 
-export const CandyMachineUploadResult = objectType({
-  name: 'CandyMachineUploadResult',
-  description: 'Result from calling candy machine upload',
-  definition(t) {
-    t.nonNull.string('processId', {
-      description: 'Process id handle',
-    });
-  },
-});
-
-export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
-  type: 'CandyMachineUploadResult',
+const runUploadV2 = async (
+  logger: winston.Logger,
+  processId: string,
   args: {
-    encryptedKeypair: nonNull(
-      arg({
-        type: 'EncryptedMessage',
-      }),
-    ),
-    config: nonNull(
-      arg({
-        type: 'JSON',
-        description: 'Candy machine configuration',
-      }),
-    ),
-    collectionMint: nonNull(
-      stringArg({
-        description: 'Collection mint pubkey',
-      }),
-    ),
-    setCollectionMint: nonNull(
-      booleanArg({
-        description: 'Set collection mint pubkey',
-      }),
-    ),
-    filesZipUrl: nonNull(
-      stringArg({
-        description: 'Zip file url with the assets',
-      }),
-    ),
+    collectionMint: string;
+    config: any;
+    encryptedKeypair: {
+      boxedMessage: string;
+      clientPublicKey: string;
+      nonce: string;
+    };
+    env: string;
+    filesZipUrl: string;
+    rpc: string;
+    setCollectionMint: boolean;
   },
-  async resolve(_, args, ctx: YogaInitialContext) {
-    const { collectionMint: collectionMintParam, setCollectionMint, filesZipUrl, config } = args;
-    const collectionMint = new web3.PublicKey(collectionMintParam);
-    const processId = uuidv4();
+) => {
+  const {
+    collectionMint: collectionMintParam,
+    setCollectionMint,
+    filesZipUrl,
+    config,
+    rpc,
+    env,
+  } = args;
+  const collectionMint = new web3.PublicKey(collectionMintParam);
 
-    const env = process.env.SOLANA_ENV!;
-
+  try {
     const keyPairBytes = JSON.parse(
       decryptEncodedPayload(args.encryptedKeypair),
     ) as number[];
@@ -76,12 +66,7 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
       Uint8Array.from(keyPairBytes),
     );
 
-    const anchorProgram = await loadCandyProgramV2(
-      walletKeyPair,
-      env,
-      process.env.RPC_URL!,
-    );
-
+    const anchorProgram = await loadCandyProgramV2(walletKeyPair, env, rpc);
 
     const {
       storage,
@@ -113,7 +98,7 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
     );
 
     if (storage === StorageType.ArweaveSol && env !== 'mainnet-beta') {
-      console.log(
+      logger.warn(
         'WARNING: On Devnet, the arweave-sol storage option only stores your files for 1 week. Please upload via Mainnet Beta for your final collection.',
       );
     }
@@ -125,7 +110,7 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
     }
 
     if (storage === StorageType.Arweave) {
-      console.warn(
+      logger.warn(
         'WARNING: The "arweave" storage option will be going away soon. Please migrate to arweave-bundle or arweave-sol for mainnet.\n',
       );
     }
@@ -199,7 +184,6 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
       } else {
         return false;
       }
-
       return true;
     });
 
@@ -226,51 +210,170 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
       );
     }
 
+    if (animationFileCount === 0) {
+      logger.info(`Beginning the upload for ${elemCount} (img+json) pairs`);
+    } else {
+      logger.info(
+        `Beginning the upload for ${elemCount} (img+animation+json) sets`,
+      );
+    }
+
     const collectionMintPubkey = await parseCollectionMintPubkey(
       collectionMint,
       anchorProgram.provider.connection,
       walletKeyPair,
     );
 
-    try {
-      await uploadV2({
-        files: supportedFiles,
-        cacheName: processId,
-        env: process.env.RPC_URL! as any,
-        totalNFTs: elemCount,
-        gatekeeper,
-        storage,
-        retainAuthority,
-        mutable,
-        nftStorageKey,
-        nftStorageGateway,
-        ipfsCredentials,
-        pinataJwt,
-        pinataGateway,
-        awsS3Bucket,
-        batchSize,
-        price,
-        treasuryWallet,
-        anchorProgram,
-        walletKeyPair,
-        splToken,
-        endSettings,
-        hiddenSettings,
-        whitelistMintSettings,
-        goLiveDate,
-        uuid,
-        arweaveJwk,
-        rateLimit: 5 /* prob 10 */,
-        collectionMintPubkey,
-        setCollectionMint,
-        rpcUrl: process.env.RPC_URL!,
-      });
-    } catch (err) {
-      throw err;
-    }
+    await uploadV2(logger, {
+      files: supportedFiles,
+      cacheName: processId,
+      env: env as 'mainnet-beta' | 'devnet',
+      totalNFTs: elemCount,
+      gatekeeper,
+      storage,
+      retainAuthority,
+      mutable,
+      nftStorageKey,
+      nftStorageGateway,
+      ipfsCredentials,
+      pinataJwt,
+      pinataGateway,
+      awsS3Bucket,
+      batchSize,
+      price,
+      treasuryWallet,
+      anchorProgram,
+      walletKeyPair,
+      splToken,
+      endSettings,
+      hiddenSettings,
+      whitelistMintSettings,
+      goLiveDate,
+      uuid,
+      arweaveJwk,
+      rateLimit: 5 /* prob 10 */,
+      collectionMintPubkey,
+      setCollectionMint,
+      rpcUrl: rpc,
+    });
 
     return {
       processId,
     };
+  } catch (err) {
+    logger.error(err);
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      rimraf(`${dirname}/${processId}`, (err) => {
+        if (err) {
+          reject(err);
+        }
+        resolve();
+      });
+    });
+  }
+};
+
+export const CandyMachineUploadResult = objectType({
+  name: 'CandyMachineUploadResult',
+  description: 'Result from calling candy machine upload',
+  definition(t) {
+    t.nonNull.string('processId', {
+      description: 'Process id handle',
+    });
   },
 });
+
+export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
+  type: 'CandyMachineUploadResult',
+  args: {
+    encryptedKeypair: nonNull(
+      arg({
+        type: 'EncryptedMessage',
+      }),
+    ),
+    config: nonNull(
+      arg({
+        type: 'JSON',
+        description: 'Candy machine configuration',
+      }),
+    ),
+    collectionMint: nonNull(
+      stringArg({
+        description: 'Collection mint pubkey',
+      }),
+    ),
+    setCollectionMint: nonNull(
+      booleanArg({
+        description: 'Set collection mint pubkey',
+      }),
+    ),
+    filesZipUrl: nonNull(
+      stringArg({
+        description: 'Zip file url with the assets',
+      }),
+    ),
+    rpc: nonNull(
+      stringArg({
+        description: 'RPC To use, can point to devnet | mainnet',
+      }),
+    ),
+    env: nonNull(
+      stringArg({
+        description: 'Solana env, either mainnet-beta | devnet | testnet',
+      }),
+    ),
+  },
+  async resolve(_, args, _ctx: YogaInitialContext) {
+    const processId = uuidv4();
+    runUploadV2(
+      winston.createLogger({
+        level: 'info',
+        format: winston.format.json(),
+        defaultMeta: { service: 'user-service' },
+        transports: [
+          new winston.transports.Console({
+            format: winston.format.simple(),
+          }),
+          new winston.transports.File({
+            format: winston.format.json(),
+            filename: `${dirname}/logs-for-${processId}.json`,
+          }),
+        ],
+      }),
+      processId,
+      args,
+    );
+    return { processId };
+  },
+});
+
+export const CandyMachineUploadLogsQuery = queryField(
+  'candyMachineUploadLogs',
+  {
+    type: 'JSON',
+    description: 'Get logs for a candy machine upload process',
+    args: {
+      processId: nonNull(
+        stringArg({
+          description: 'Process id handle',
+        }),
+      ),
+    },
+    async resolve(_, args, _ctx: YogaInitialContext) {
+      const { processId } = args;
+      const logsPath = `${dirname}/logs-for-${processId}.json`;
+      const fileExists = await fs
+        .stat(logsPath)
+        .then(() => true)
+        .catch(() => false);
+      // Check logs file exists
+      if (!fileExists) {
+        return {};
+      }
+      // Read logs file
+      const logs = await fs.readFile(logsPath, 'utf8');
+      return JSON.parse(logs);
+    },
+  },
+);

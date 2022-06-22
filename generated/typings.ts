@@ -4,9 +4,23 @@
  */
 
 
-
-
-
+import type { core } from "nexus"
+declare global {
+  interface NexusGenCustomInputMethods<TypeName extends string> {
+    /**
+     * The `File` scalar type represents a file upload.
+     */
+    file<FieldName extends string>(fieldName: FieldName, opts?: core.CommonInputFieldConfig<TypeName, FieldName>): void // "File";
+  }
+}
+declare global {
+  interface NexusGenCustomOutputMethods<TypeName extends string> {
+    /**
+     * The `File` scalar type represents a file upload.
+     */
+    file<FieldName extends string>(fieldName: FieldName, ...opts: core.ScalarOutSpread<TypeName, FieldName>): void // "File";
+  }
+}
 
 
 declare global {
@@ -53,6 +67,7 @@ export interface NexusGenScalars {
   Float: number
   Boolean: boolean
   ID: string
+  File: File
   JSON: any
 }
 
@@ -96,7 +111,7 @@ export interface NexusGenFieldTypes {
     mintNft: NexusGenRootTypes['MintNftResult'] | null; // MintNftResult
   }
   Query: { // field return type
-    ok: boolean; // Boolean!
+    candyMachineUploadLogs: NexusGenScalars['JSON'] | null; // JSON
   }
 }
 
@@ -116,7 +131,7 @@ export interface NexusGenFieldTypeNames {
     mintNft: 'MintNftResult'
   }
   Query: { // field return type name
-    ok: 'Boolean'
+    candyMachineUploadLogs: 'JSON'
   }
 }
 
@@ -129,12 +144,20 @@ export interface NexusGenArgTypes {
       collectionMint: string; // String!
       config: NexusGenScalars['JSON']; // JSON!
       encryptedKeypair: NexusGenInputs['EncryptedMessage']; // EncryptedMessage!
+      env: string; // String!
       filesZipUrl: string; // String!
+      rpc: string; // String!
       setCollectionMint: boolean; // Boolean!
     }
     mintNft: { // args
       encryptedMessage: NexusGenInputs['EncryptedMessage']; // EncryptedMessage!
-      nftMetadata: NexusGenInputs['NftMetadata']; // NftMetadata!
+      nftMetadata?: NexusGenInputs['NftMetadata'] | null; // NftMetadata
+      nftMetadataJSON?: NexusGenScalars['File'] | null; // File
+    }
+  }
+  Query: {
+    candyMachineUploadLogs: { // args
+      processId: string; // String!
     }
   }
 }

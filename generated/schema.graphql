@@ -28,6 +28,9 @@ type EncryptedMessageResult {
   message: String!
 }
 
+"""The `File` scalar type represents a file upload."""
+scalar File
+
 scalar JSON
 
 """The result for minting a NFT"""
@@ -46,13 +49,19 @@ type Mutation {
     config: JSON!
     encryptedKeypair: EncryptedMessage!
 
+    """Solana env, either mainnet-beta | devnet | testnet"""
+    env: String!
+
     """Zip file url with the assets"""
     filesZipUrl: String!
+
+    """RPC To use, can point to devnet | mainnet"""
+    rpc: String!
 
     """Set collection mint pubkey"""
     setCollectionMint: Boolean!
   ): CandyMachineUploadResult
-  mintNft(encryptedMessage: EncryptedMessage!, nftMetadata: NftMetadata!): MintNftResult
+  mintNft(encryptedMessage: EncryptedMessage!, nftMetadata: NftMetadata, nftMetadataJSON: File): MintNftResult
 }
 
 input NftAttribute {
@@ -110,5 +119,9 @@ input NftProperties {
 }
 
 type Query {
-  ok: Boolean!
+  """Get logs for a candy machine upload process"""
+  candyMachineUploadLogs(
+    """Process id handle"""
+    processId: String!
+  ): JSON
 }

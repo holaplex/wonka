@@ -20,3 +20,18 @@ export const decryptEncodedPayload = ({
     ),
   ) as string;
 };
+
+// JSON PARSE KEYPAIR
+export const encryptPayload = (contents: string, peerPubKeyB58: string) => {
+  const nonce = nacl.randomBytes(nacl.box.nonceLength);
+  const box = nacl.box(
+    new TextEncoder().encode(contents),
+    nonce,
+    bs58.decode(peerPubKeyB58),
+    bs58.decode(process.env.SERVER_PRIVATE_KEY!),
+  );
+  return {
+    nonce: bs58.encode(nonce),
+    box: bs58.encode(box),
+  };
+};
