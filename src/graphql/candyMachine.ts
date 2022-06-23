@@ -13,8 +13,8 @@ import { uuid as uuidv4 } from 'uuidv4';
 import path from 'path';
 import fs from 'fs/promises';
 import { getType } from 'mime';
-import rimraf from 'rimraf';
 import winston from 'winston';
+import rimraf from 'rimraf';
 
 import { uploadV2 } from '../../cli/commands/upload-logged.js';
 import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
@@ -26,7 +26,8 @@ import {
 import { StorageType } from '../../cli/helpers/storage-type.js';
 import { download } from '../lib/helpers/downloadFile.js';
 import { unzip } from '../lib/helpers/unZipFile.js';
-import { EXTENSION_JSON } from '../../cli/helpers/constants.js';
+import { CACHE_PATH, EXTENSION_JSON } from '../../cli/helpers/constants.js';
+import mkdirp from 'mkdirp';
 
 const dirname = path.resolve();
 
@@ -153,11 +154,14 @@ const runUploadV2 = async (
     let animationFileCount = 0;
     let jsonFileCount = 0;
 
+    await mkdirp(`${dirname}/${processId}`);
     const zipFile = `${dirname}/${processId}/files.zip`;
     await download(filesZipUrl, zipFile);
     const zipFilesDir = `${dirname}/${processId}/files`;
     await unzip(zipFile, zipFilesDir);
-    const files = await fs.readdir(zipFilesDir);
+
+    let files = await fs.readdir(zipFilesDir);
+    files = files.map((file) => path.join(zipFilesDir, file));
 
     const supportedImageTypes = {
       'image/png': 1,
@@ -261,7 +265,7 @@ const runUploadV2 = async (
       processId,
     };
   } catch (err) {
-    logger.error(err);
+    logger.error('Stopped due to error:', err);
   } finally {
     await new Promise<void>((resolve, reject) => {
       rimraf(`${dirname}/${processId}`, (err) => {
@@ -326,24 +330,33 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
   },
   async resolve(_, args, _ctx: YogaInitialContext) {
     const processId = uuidv4();
-    runUploadV2(
-      winston.createLogger({
-        level: 'info',
-        format: winston.format.json(),
-        defaultMeta: { service: 'user-service' },
-        transports: [
-          new winston.transports.Console({
-            format: winston.format.simple(),
-          }),
-          new winston.transports.File({
-            format: winston.format.json(),
-            filename: `${dirname}/logs-for-${processId}.json`,
-          }),
-        ],
-      }),
-      processId,
-      args,
-    );
+    const logger = winston.createLogger({
+      level: 'info',
+      format: winston.format.json(),
+      transports: [
+        new winston.transports.Console({
+          format: winston.format.simple(),
+        }),
+        new winston.transports.File({
+          format: winston.format.json(),
+          filename: `${dirname}/logs/${processId}.json`,
+        }),
+      ],
+    });
+
+    if (
+      !(await fs
+        .stat(CACHE_PATH)
+        .then(() => true)
+        .catch(() => false))
+    ) {
+      await fs.mkdir(CACHE_PATH);
+    }
+
+    runUploadV2(logger, processId, args).catch((err) => {
+      logger.error('Aborting due to error');
+      logger.error(err);
+    });
     return { processId };
   },
 });
@@ -362,7 +375,7 @@ export const CandyMachineUploadLogsQuery = queryField(
     },
     async resolve(_, args, _ctx: YogaInitialContext) {
       const { processId } = args;
-      const logsPath = `${dirname}/logs-for-${processId}.json`;
+      const logsPath = `${dirname}/logs/${processId}.json`;
       const fileExists = await fs
         .stat(logsPath)
         .then(() => true)

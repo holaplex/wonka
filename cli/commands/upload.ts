@@ -139,7 +139,7 @@ export async function uploadV2({
 
       if (
         !firstAssetManifest.properties?.creators?.every(
-          creator => creator.address !== undefined,
+          (creator) => creator.address !== undefined,
         )
       ) {
         throw new Error('Creator address is missing');
@@ -166,7 +166,7 @@ export async function uploadV2({
           endSettings,
           whitelistMintSettings,
           hiddenSettings,
-          creators: firstAssetManifest.properties.creators.map(creator => {
+          creators: firstAssetManifest.properties.creators.map((creator) => {
             return {
               address: new PublicKey(creator.address),
               verified: true,
@@ -250,7 +250,7 @@ export async function uploadV2({
           cacheContent,
           cacheKeys,
           arweavePathManifestLinks,
-          updatedManifests.map(m => m.name),
+          updatedManifests.map((m) => m.name),
         );
 
         saveCache(cacheName, env, cacheContent);
@@ -275,9 +275,9 @@ export async function uploadV2({
       for await (const result of generator) {
         updateCacheAfterUpload(
           cacheContent,
-          result.assets.map(a => a.cacheKey),
-          result.assets.map(a => a.metadataJsonLink),
-          result.assets.map(a => a.updatedManifest.name),
+          result.assets.map((a) => a.cacheKey),
+          result.assets.map((a) => a.metadataJsonLink),
+          result.assets.map((a) => a.updatedManifest.name),
         );
 
         saveCache(cacheName, env, cacheContent);
@@ -301,7 +301,7 @@ export async function uploadV2({
           );
           await sleep(5000);
         })
-        .process(async asset => {
+        .process(async (asset) => {
           const manifest = getAssetManifest(
             dirname,
             asset.index.includes('json') ? asset.index : `${asset.index}.json`,
@@ -354,6 +354,7 @@ export async function uploadV2({
               case StorageType.Arweave:
               default:
                 [link, imageLink] = await arweaveUpload(
+                  null,
                   walletKeyPair,
                   anchorProgram,
                   env,
@@ -453,12 +454,12 @@ function getAssetKeysNeedingUpload(
   const all = [
     ...new Set([
       ...Object.keys(items),
-      ...files.map(filePath => path.basename(filePath)),
+      ...files.map((filePath) => path.basename(filePath)),
     ]),
   ];
   const keyMap = {};
   return all
-    .filter(k => !k.includes('.json'))
+    .filter((k) => !k.includes('.json'))
     .reduce((acc, assetKey) => {
       const ext = path.extname(assetKey);
       const key = path.basename(assetKey, ext);
@@ -543,7 +544,7 @@ async function writeIndices({
     configLines = allIndicesInSlice.slice(offset, offset + lineSize);
     offset += lineSize;
     const onChain = configLines.filter(
-      i => cacheContent.items[keys[i]]?.onChain || false,
+      (i) => cacheContent.items[keys[i]]?.onChain || false,
     );
     const index = keys[configLines[0]];
     if (onChain.length != configLines.length) {
@@ -562,7 +563,7 @@ async function writeIndices({
   const addConfigLines = async ({ index, configLines }) => {
     const response = await anchorProgram.rpc.addConfigLines(
       index,
-      configLines.map(i => ({
+      configLines.map((i) => ({
         uri: cacheContent.items[keys[i]].link,
         name: cacheContent.items[keys[i]].name,
       })),
@@ -575,7 +576,7 @@ async function writeIndices({
       },
     );
     log.debug(response);
-    configLines.forEach(i => {
+    configLines.forEach((i) => {
       cacheContent.items[keys[i]] = {
         ...cacheContent.items[keys[i]],
         onChain: true,
@@ -726,7 +727,7 @@ export async function upload({
           cache,
           cacheKeys,
           arweavePathManifestLinks,
-          updatedManifests.map(m => m.name),
+          updatedManifests.map((m) => m.name),
         );
         saveCache(cacheName, env, cache);
         log.info('Saved bundle upload result to cache.');
@@ -740,7 +741,7 @@ export async function upload({
 
       await Promise.all(
         chunks(Array.from(Array(SIZE).keys()), batchSize || 50).map(
-          async allIndicesInSlice => {
+          async (allIndicesInSlice) => {
             for (let i = 0; i < allIndicesInSlice.length; i++) {
               const assetKey = dedupedAssetKeys[i];
               const image = path.join(
@@ -780,6 +781,7 @@ export async function upload({
                   case StorageType.Arweave:
                   default:
                     [link, imageLink] = await arweaveUpload(
+                      null,
                       walletKeyPair,
                       anchorProgram,
                       env,

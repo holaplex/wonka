@@ -296,6 +296,7 @@ export async function uploadV2(
       await PromisePool.withConcurrency(batchSize || 10)
         .for(dedupedAssetKeys)
         .handleError(async (err, asset) => {
+          console.log(err);
           logger.error(
             `\nError uploading ${JSON.stringify(asset)} asset (skipping)`,
             err.message,
@@ -355,6 +356,7 @@ export async function uploadV2(
               case StorageType.Arweave:
               default:
                 [link, imageLink] = await arweaveUpload(
+                  logger,
                   walletKeyPair,
                   anchorProgram,
                   env,

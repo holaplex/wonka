@@ -2,25 +2,25 @@ import * as anchor from '@project-serum/anchor';
 import FormData from 'form-data';
 import fs from 'fs';
 import path from 'path';
-import log from 'loglevel';
 import fetch from 'node-fetch';
 import { stat } from 'fs/promises';
 import { calculate } from '@metaplex/arweave-cost';
 import { ARWEAVE_PAYMENT_WALLET } from '../constants';
 import { sendTransactionWithRetryWithKeypair } from '../transactions';
+import { Logger } from 'winston';
 
 const ARWEAVE_UPLOAD_ENDPOINT =
   'https://us-central1-metaplex-studios.cloudfunctions.net/uploadFile';
 
-async function fetchAssetCostToStore(fileSizes: number[]) {
+async function fetchAssetCostToStore(logger: Logger | null, fileSizes: number[]) {
   const result = await calculate(fileSizes);
-  log.debug('Arweave cost estimates:', result);
+  logger?.debug('Arweave cost estimates:', result);
 
   return result.solana * anchor.web3.LAMPORTS_PER_SOL;
 }
 
-async function upload(data: FormData, manifest, index) {
-  log.debug(`trying to upload image ${index}: ${manifest.name}`);
+async function upload(logger: Logger | null, data: FormData, manifest, index) {
+  logger?.debug(`trying to upload image ${index}: ${manifest.name}`);
   return await (
     await fetch(ARWEAVE_UPLOAD_ENDPOINT, {
       method: 'POST',
@@ -30,7 +30,7 @@ async function upload(data: FormData, manifest, index) {
   ).json();
 }
 
-function estimateManifestSize(filenames: string[]) {
+function estimateManifestSize(logger: Logger | null, filenames: string[]) {
   const paths = {};
 
   for (const name of filenames) {
@@ -50,11 +50,12 @@ function estimateManifestSize(filenames: string[]) {
   };
 
   const data = Buffer.from(JSON.stringify(manifest), 'utf8');
-  log.debug('Estimated manifest size:', data.length);
+  logger?.debug('Estimated manifest size:', data.length);
   return data.length;
 }
 
 export async function arweaveUpload(
+  logger: Logger | null,
   walletKeyPair,
   anchorProgram,
   env,
@@ -65,22 +66,25 @@ export async function arweaveUpload(
 ) {
   const imageExt = path.extname(image);
   const fsStat = await stat(image);
-  const estimatedManifestSize = estimateManifestSize([
+
+  const estimatedManifestSize = estimateManifestSize(logger, [
     `${index}${imageExt}`,
     'metadata.json',
   ]);
-  const storageCost = await fetchAssetCostToStore([
+
+  const storageCost = await fetchAssetCostToStore(logger, [
     fsStat.size,
     manifestBuffer.length,
     estimatedManifestSize,
   ]);
-  log.debug(`lamport cost to store ${image}: ${storageCost}`);
+
+  logger?.debug(`lamport cost to store ${image}: ${storageCost}`);
 
   const instructions = [
     anchor.web3.SystemProgram.transfer({
       fromPubkey: walletKeyPair.publicKey,
       toPubkey: ARWEAVE_PAYMENT_WALLET,
-      lamports: storageCost,
+      lamports: Math.round(storageCost),
     }),
   ];
 
@@ -91,7 +95,7 @@ export async function arweaveUpload(
     [],
     'confirmed',
   );
-  log.debug(`solana transaction (${env}) for arweave payment:`, tx);
+  logger?.debug(`solana transaction (${env}) for arweave payment:`, tx);
 
   const data = new FormData();
   data.append('transaction', tx['txid']);
@@ -102,20 +106,20 @@ export async function arweaveUpload(
   });
   data.append('file[]', manifestBuffer, 'metadata.json');
 
-  const result = await upload(data, manifest, index);
+  const result = await upload(logger, data, manifest, index);
 
   const metadataFile = result.messages?.find(
-    m => m.filename === 'manifest.json',
+    (m) => m.filename === 'manifest.json',
   );
   const imageFile = result.messages?.find(
-    m => m.filename === `${index}${imageExt}`,
+    (m) => m.filename === `${index}${imageExt}`,
   );
   if (metadataFile?.transactionId) {
     const link = `https://arweave.net/${metadataFile.transactionId}`;
     const imageLink = `https://arweave.net/${
       imageFile.transactionId
     }?ext=${imageExt.replace('.', '')}`;
-    log.debug(`File uploaded: ${link}`);
+    logger?.debug(`File uploaded: ${link}`);
     return [link, imageLink];
   } else {
     // @todo improve
