@@ -10,11 +10,15 @@ const PORT = parseInt(process.env!.PORT, 10);
 const schema = makeSchema({
   types: [graphqlTypes],
   outputs: {
-    schema: dirname + '/generated/schema.graphql',
-    typegen: dirname + '/generated/typings.ts',
+    schema: `${dirname}/generated/schema.graphql`,
+    typegen: `${dirname}/generated/typings.ts`,
   },
 });
 
-const server = createServer({ schema, port: PORT });
+const server = createServer({
+  schema,
+  port: PORT,
+  https: process.env.APP_ENV! !== 'development',
+});
 
 server.start();
