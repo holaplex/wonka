@@ -261,7 +261,7 @@ const runUploadV2 = async (
       setCollectionMint,
       rpcUrl: rpc,
       callbackUrl: args.callbackUrl,
-      guid: args.guid
+      guid: args.guid,
     });
 
     return {
@@ -323,11 +323,9 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         description: 'Zip file url with the assets',
       }),
     ),
-    guid: nonNull(
-      stringArg({
-        description: 'Campus GUID',
-      }),
-    ),
+    guid: stringArg({
+      description: 'Campus GUID',
+    }),
     rpc: nonNull(
       stringArg({
         description: 'RPC To use, can point to devnet | mainnet',
