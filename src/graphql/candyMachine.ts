@@ -16,6 +16,7 @@ import { getType } from 'mime';
 import winston from 'winston';
 import rimraf from 'rimraf';
 import { uploadV2 } from '../../cli/commands/upload-logged.js';
+
 import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
 import { loadCandyProgramV2 } from '../../cli/helpers/accounts.js';
 import {
@@ -366,7 +367,6 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
       logger.error('Aborting due to error');
       logger.error(err);
     });
-
     return { processId };
   },
 });
