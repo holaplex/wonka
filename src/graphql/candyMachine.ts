@@ -363,7 +363,7 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
       logger.error(err);
     });
 
-    await Axios.post(args.callback, {"key": "value"}) 
+    await Axios.post(args.callback, {"processId": processId}) 
     return { processId };
   },
 });
