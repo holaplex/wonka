@@ -180,6 +180,7 @@ export async function uploadV2(
       );
       cacheContent.program.uuid = res.uuid;
       cacheContent.program.candyMachine = res.candyMachine.toBase58();
+      cacheContent.program.guid = guid;
       candyMachine = res.candyMachine;
 
       if (setCollectionMint) {
