@@ -37,6 +37,7 @@ const runUploadV2 = async (
   args: {
     collectionMint: string;
     config: any;
+    callbackUrl: null | string;
     encryptedKeypair: {
       boxedMessage: string;
       clientPublicKey: string;
@@ -259,6 +260,7 @@ const runUploadV2 = async (
       collectionMintPubkey,
       setCollectionMint,
       rpcUrl: rpc,
+      callbackUrl: args.callbackUrl
     });
 
     return {
@@ -281,7 +283,7 @@ const runUploadV2 = async (
 export const CandyMachineUploadResult = objectType({
   name: 'CandyMachineUploadResult',
   description: 'Result from calling candy machine upload',
-  definition(t) {
+  definition (t) {
     t.nonNull.string('processId', {
       description: 'Process id handle',
     });
@@ -298,7 +300,7 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
     ),
     callback: nonNull(
       stringArg({
-        description: 'Candy Machine Creation callback url'
+        description: 'Candy Machine Creation callback url',
       }),
     ),
     config: nonNull(
@@ -322,6 +324,11 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         description: 'Zip file url with the assets',
       }),
     ),
+    guid: nonNull(
+      stringArg({
+        description: 'Campus GUID',
+      }),
+    ),
     rpc: nonNull(
       stringArg({
         description: 'RPC To use, can point to devnet | mainnet',
@@ -333,7 +340,7 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
       }),
     ),
   },
-  async resolve(_, args, _ctx: YogaInitialContext) {
+  async resolve (_, args, _ctx: YogaInitialContext) {
     const processId = uuidv4();
     const logger = winston.createLogger({
       level: 'info',
@@ -363,7 +370,6 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
       logger.error(err);
     });
 
-    await Axios.post(args.callback, {"processId": processId}) 
     return { processId };
   },
 });
@@ -380,7 +386,7 @@ export const CandyMachineUploadLogsQuery = queryField(
         }),
       ),
     },
-    async resolve(_, args, _ctx: YogaInitialContext) {
+    async resolve (_, args, _ctx: YogaInitialContext) {
       const { processId } = args;
       const logsPath = `${dirname}/logs/${processId}.json`;
       const fileExists = await fs

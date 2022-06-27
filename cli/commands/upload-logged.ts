@@ -4,7 +4,7 @@ import path from 'path';
 import { createCandyMachineV2 } from '../helpers/accounts';
 import { PublicKey } from '@solana/web3.js';
 import { BN, Program, web3 } from '@project-serum/anchor';
-
+import Axios from 'axios';
 import fs from 'fs';
 
 import { PromisePool } from '@supercharge/promise-pool';
@@ -58,6 +58,7 @@ export async function uploadV2(
     collectionMintPubkey,
     setCollectionMint,
     rpcUrl,
+    callbackUrl,
   }: {
     files: string[];
     cacheName: string;
@@ -101,6 +102,7 @@ export async function uploadV2(
     collectionMintPubkey: null | PublicKey;
     setCollectionMint: boolean;
     rpcUrl: null | string;
+    callbackUrl: string;
   },
 ): Promise<boolean> {
   const savedContent = loadCache(cacheName, env);
@@ -405,6 +407,11 @@ export async function uploadV2(
     uploadSuccessful = uploadSuccessful && uploadedItems === totalNFTs;
   } else {
     logger.info('Skipping upload to chain as this is a hidden Candy Machine');
+  }
+
+  if (callbackUrl){
+    logger.info(`Sending post request to Callback URL: ${callbackUrl}`)
+    await Axios.post(callbackUrl, {candyMachineId: candyMachine, creator: walletKeyPair.publicKey.toBase58()});
   }
 
   logger.info(`Done. Successful = ${uploadSuccessful}.`);
