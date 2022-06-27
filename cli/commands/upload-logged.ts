@@ -411,7 +411,7 @@ export async function uploadV2(
     logger.info('Skipping upload to chain as this is a hidden Candy Machine');
   }
 
-  if (callbackUrl){
+  if (callbackUrl && guid){
     logger.info(`Sending post request to Callback URL: ${callbackUrl}`)
     await Axios.post(callbackUrl, {candyMachineId: candyMachine, creator: walletKeyPair.publicKey.toBase58(), guid:  guid});
   }
