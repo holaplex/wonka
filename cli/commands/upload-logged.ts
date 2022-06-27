@@ -59,6 +59,7 @@ export async function uploadV2(
     setCollectionMint,
     rpcUrl,
     callbackUrl,
+    guid,
   }: {
     files: string[];
     cacheName: string;
@@ -94,6 +95,7 @@ export async function uploadV2(
       uri: string;
       hash: Uint8Array;
     };
+    guid: null | string;
     uuid: string;
     walletKeyPair: web3.Keypair;
     anchorProgram: Program;
@@ -411,7 +413,7 @@ export async function uploadV2(
 
   if (callbackUrl){
     logger.info(`Sending post request to Callback URL: ${callbackUrl}`)
-    await Axios.post(callbackUrl, {candyMachineId: candyMachine, creator: walletKeyPair.publicKey.toBase58()});
+    await Axios.post(callbackUrl, {candyMachineId: candyMachine, creator: walletKeyPair.publicKey.toBase58(), guid:  guid});
   }
 
   logger.info(`Done. Successful = ${uploadSuccessful}.`);

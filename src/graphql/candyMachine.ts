@@ -15,7 +15,6 @@ import fs from 'fs/promises';
 import { getType } from 'mime';
 import winston from 'winston';
 import rimraf from 'rimraf';
-import Axios from 'axios';
 import { uploadV2 } from '../../cli/commands/upload-logged.js';
 import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
 import { loadCandyProgramV2 } from '../../cli/helpers/accounts.js';
@@ -38,6 +37,7 @@ const runUploadV2 = async (
     collectionMint: string;
     config: any;
     callbackUrl: null | string;
+    guid: null | string;
     encryptedKeypair: {
       boxedMessage: string;
       clientPublicKey: string;
@@ -260,7 +260,8 @@ const runUploadV2 = async (
       collectionMintPubkey,
       setCollectionMint,
       rpcUrl: rpc,
-      callbackUrl: args.callbackUrl
+      callbackUrl: args.callbackUrl,
+      guid: args.guid
     });
 
     return {
@@ -298,11 +299,9 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         type: 'EncryptedMessage',
       }),
     ),
-    callback: nonNull(
-      stringArg({
-        description: 'Candy Machine Creation callback url',
-      }),
-    ),
+    callback: stringArg({
+      description: 'Candy Machine Creation callback url',
+    }),
     config: nonNull(
       arg({
         type: 'JSON',
