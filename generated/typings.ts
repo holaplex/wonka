@@ -143,9 +143,9 @@ export interface NexusGenArgTypes {
     candyMachineUpload: { // args
       collectionMint: string; // String!
       config: NexusGenScalars['JSON']; // JSON!
-      encryptedKeypair: NexusGenInputs['EncryptedMessage']; // EncryptedMessage!
       env: string; // String!
       filesZipUrl: string; // String!
+      keyPair: string; // String!
       rpc: string; // String!
       setCollectionMint: boolean; // Boolean!
     }

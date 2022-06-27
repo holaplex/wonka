@@ -47,13 +47,15 @@ type Mutation {
 
     """Candy machine configuration"""
     config: JSON!
-    encryptedKeypair: EncryptedMessage!
 
     """Solana env, either mainnet-beta | devnet | testnet"""
     env: String!
 
     """Zip file url with the assets"""
     filesZipUrl: String!
+
+    """Wallet keypair"""
+    keyPair: String!
 
     """RPC To use, can point to devnet | mainnet"""
     rpc: String!

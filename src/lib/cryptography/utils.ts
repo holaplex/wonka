@@ -10,8 +10,8 @@ export const decryptEncodedPayload = ({
   boxedMessage: string;
   clientPublicKey: string;
   nonce: string;
-}) => {
-  return new TextDecoder().decode(
+}) =>
+  new TextDecoder().decode(
     nacl.box.open(
       bs58.decode(boxedMessage),
       bs58.decode(nonce),
@@ -19,7 +19,6 @@ export const decryptEncodedPayload = ({
       bs58.decode(process.env.SERVER_PRIVATE_KEY!),
     ),
   ) as string;
-};
 
 // JSON PARSE KEYPAIR
 export const encryptPayload = (contents: string, peerPubKeyB58: string) => {
