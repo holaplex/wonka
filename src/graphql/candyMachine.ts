@@ -16,7 +16,6 @@ import { getType } from 'mime';
 import winston from 'winston';
 import rimraf from 'rimraf';
 import { uploadV2 } from '../../cli/commands/upload-logged.js';
-
 import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
 import { loadCandyProgramV2 } from '../../cli/helpers/accounts.js';
 import {
