@@ -15,7 +15,6 @@ import fs from 'fs/promises';
 import { getType } from 'mime';
 import winston from 'winston';
 import rimraf from 'rimraf';
-
 import { uploadV2 } from '../../cli/commands/upload-logged.js';
 import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
 import { loadCandyProgramV2 } from '../../cli/helpers/accounts.js';
@@ -39,6 +38,13 @@ const runUploadV2 = async (
   args: {
     collectionMint: string;
     config: any;
+    callbackUrl: null | string;
+    guid: null | string;
+    encryptedKeypair: {
+      boxedMessage: string;
+      clientPublicKey: string;
+      nonce: string;
+    };
     keyPair: string;
     env: string;
     filesZipUrl: string;
@@ -280,6 +286,8 @@ const runUploadV2 = async (
           collectionMintPubkey,
           setCollectionMint,
           rpcUrl: rpc,
+          callbackUrl: args.callbackUrl,
+          guid: args.guid,
         });
 
         return { processId };
@@ -312,7 +320,7 @@ const runUploadV2 = async (
 export const CandyMachineUploadResult = objectType({
   name: 'CandyMachineUploadResult',
   description: 'Result from calling candy machine upload',
-  definition(t) {
+  definition (t) {
     t.nonNull.string('processId', {
       description: 'Process id handle',
     });
@@ -332,6 +340,9 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         description: 'Wallet keypair',
       }),
     ),
+    callback: stringArg({
+      description: 'Candy Machine Creation callback url',
+    }),
     config: nonNull(
       arg({
         type: 'JSON',
@@ -353,6 +364,9 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         description: 'Zip file url with the assets',
       }),
     ),
+    guid: stringArg({
+      description: 'Campus GUID',
+    }),
     rpc: nonNull(
       stringArg({
         description: 'RPC To use, can point to devnet | mainnet',
@@ -364,7 +378,7 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
       }),
     ),
   },
-  async resolve(_, args, _ctx: YogaInitialContext) {
+  async resolve (_, args, _ctx: YogaInitialContext) {
     const processId = uuidv4();
     const logger = winston.createLogger({
       level: 'info',
@@ -421,7 +435,7 @@ export const CandyMachineUploadLogsQuery = queryField(
         }),
       ),
     },
-    async resolve(_, args, _ctx: YogaInitialContext) {
+    async resolve (_, args, _ctx: YogaInitialContext) {
       const { processId } = args;
       const logsPath = `${dirname}/logs/${processId}.json`;
       const fileExists = await fs
