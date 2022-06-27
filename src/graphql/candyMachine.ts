@@ -38,7 +38,6 @@ const runUploadV2 = async (
   args: {
     collectionMint: string;
     config: any;
-<<<<<<< HEAD
     callbackUrl: null | string;
     guid: null | string;
     encryptedKeypair: {
@@ -46,9 +45,7 @@ const runUploadV2 = async (
       clientPublicKey: string;
       nonce: string;
     };
-=======
     keyPair: string;
->>>>>>> 3b9f2915828d4df7adebaa4a14e8dfdc694fca21
     env: string;
     filesZipUrl: string;
     rpc: string;
@@ -235,48 +232,6 @@ const runUploadV2 = async (
           );
         }
 
-<<<<<<< HEAD
-    const collectionMintPubkey = await parseCollectionMintPubkey(
-      collectionMint,
-      anchorProgram.provider.connection,
-      walletKeyPair,
-    );
-
-    await uploadV2(logger, {
-      files: supportedFiles,
-      cacheName: processId,
-      env: env as 'mainnet-beta' | 'devnet',
-      totalNFTs: elemCount,
-      gatekeeper,
-      storage,
-      retainAuthority,
-      mutable,
-      nftStorageKey,
-      nftStorageGateway,
-      ipfsCredentials,
-      pinataJwt,
-      pinataGateway,
-      awsS3Bucket,
-      batchSize,
-      price,
-      treasuryWallet,
-      anchorProgram,
-      walletKeyPair,
-      splToken,
-      endSettings,
-      hiddenSettings,
-      whitelistMintSettings,
-      goLiveDate,
-      uuid,
-      arweaveJwk,
-      rateLimit: 5 /* prob 10 */,
-      collectionMintPubkey,
-      setCollectionMint,
-      rpcUrl: rpc,
-      callbackUrl: args.callbackUrl,
-      guid: args.guid,
-    });
-=======
         const elemCount = number ? number : imageFileCount;
         if (elemCount < imageFileCount) {
           bail(
@@ -285,7 +240,6 @@ const runUploadV2 = async (
             ),
           );
         }
->>>>>>> 3b9f2915828d4df7adebaa4a14e8dfdc694fca21
 
         if (animationFileCount === 0) {
           logger.info(`Beginning the upload for ${elemCount} (img+json) pairs`);
@@ -332,6 +286,8 @@ const runUploadV2 = async (
           collectionMintPubkey,
           setCollectionMint,
           rpcUrl: rpc,
+          callbackUrl: args.callbackUrl,
+          guid: args.guid,
         });
 
         return { processId };
