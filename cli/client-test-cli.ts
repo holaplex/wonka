@@ -38,9 +38,10 @@ program
     var enc = new TextEncoder(); // always utf-8
     let clientKeys = nacl.box.keyPair();
     //Key Generation Code:
-    //let test = nacl.box.keyPair.fromSecretKey(Uint8Array.from(crypto.randomBytes(32)));
-    //console.log(Buffer.from(test.publicKey).toString('hex'));
-    //console.log(Buffer.from(test.secretKey).toString('hex'));
+    let test = nacl.box.keyPair.fromSecretKey(Uint8Array.from(crypto.randomBytes(32)));
+    console.log(test.publicKey);
+    console.log(test.secretKey);
+    console.log(bs58.decode('4tieZ9Pst1TRUeCpeNeaXgraNbZSLnKrzgPJjeRVMsgj'));
     console.log(clientKeys.publicKey.length);
     let message = clientKeys.secretKey;
     let nonce = nacl.randomBytes(nacl.box.nonceLength);

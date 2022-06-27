@@ -133,3 +133,4 @@ dist
 build/
 firebaseConfig.json
 firebaseAdminConfig.json
+cache-files

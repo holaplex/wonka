@@ -1,12 +1,7 @@
 import * as cliProgress from 'cli-progress';
 import { readFile } from 'fs/promises';
 import path from 'path';
-import log from 'loglevel';
-import {
-  createCandyMachineV2,
-  loadCandyProgram,
-  loadWalletKey,
-} from '../helpers/accounts';
+import { createCandyMachineV2 } from '../helpers/accounts';
 import { PublicKey } from '@solana/web3.js';
 import { BN, Program, web3 } from '@project-serum/anchor';
 
@@ -28,82 +23,86 @@ import { chunks, sleep } from '../helpers/various';
 import { pinataUpload } from '../helpers/upload/pinata';
 import { setCollection } from './set-collection';
 import { nftStorageUploadGenerator } from '../helpers/upload/nft-storage';
+import { Logger } from 'winston';
 
-export async function uploadV2({
-  files,
-  cacheName,
-  env,
-  totalNFTs,
-  storage,
-  retainAuthority,
-  mutable,
-  nftStorageKey,
-  nftStorageGateway,
-  ipfsCredentials,
-  pinataJwt,
-  pinataGateway,
-  awsS3Bucket,
-  batchSize,
-  price,
-  treasuryWallet,
-  splToken,
-  gatekeeper,
-  goLiveDate,
-  endSettings,
-  whitelistMintSettings,
-  hiddenSettings,
-  uuid,
-  walletKeyPair,
-  anchorProgram,
-  arweaveJwk,
-  rateLimit,
-  collectionMintPubkey,
-  setCollectionMint,
-  rpcUrl,
-}: {
-  files: string[];
-  cacheName: string;
-  env: 'mainnet-beta' | 'devnet';
-  totalNFTs: number;
-  storage: string;
-  retainAuthority: boolean;
-  mutable: boolean;
-  nftStorageKey: string;
-  nftStorageGateway: string | null;
-  ipfsCredentials: ipfsCreds;
-  pinataJwt: string;
-  pinataGateway: string;
-  awsS3Bucket: string;
-  batchSize: number;
-  price: BN;
-  treasuryWallet: PublicKey;
-  splToken: PublicKey;
-  gatekeeper: null | {
-    expireOnUse: boolean;
-    gatekeeperNetwork: web3.PublicKey;
-  };
-  goLiveDate: null | BN;
-  endSettings: null | [number, BN];
-  whitelistMintSettings: null | {
-    mode: any;
-    mint: PublicKey;
-    presale: boolean;
-    discountPrice: null | BN;
-  };
-  hiddenSettings: null | {
-    name: string;
-    uri: string;
-    hash: Uint8Array;
-  };
-  uuid: string;
-  walletKeyPair: web3.Keypair;
-  anchorProgram: Program;
-  arweaveJwk: string;
-  rateLimit: number;
-  collectionMintPubkey: null | PublicKey;
-  setCollectionMint: boolean;
-  rpcUrl: null | string;
-}): Promise<boolean> {
+export async function uploadV2(
+  logger: Logger,
+  {
+    files,
+    cacheName,
+    env,
+    totalNFTs,
+    storage,
+    retainAuthority,
+    mutable,
+    nftStorageKey,
+    nftStorageGateway,
+    ipfsCredentials,
+    pinataJwt,
+    pinataGateway,
+    awsS3Bucket,
+    batchSize,
+    price,
+    treasuryWallet,
+    splToken,
+    gatekeeper,
+    goLiveDate,
+    endSettings,
+    whitelistMintSettings,
+    hiddenSettings,
+    uuid,
+    walletKeyPair,
+    anchorProgram,
+    arweaveJwk,
+    rateLimit,
+    collectionMintPubkey,
+    setCollectionMint,
+    rpcUrl,
+  }: {
+    files: string[];
+    cacheName: string;
+    env: 'mainnet-beta' | 'devnet';
+    totalNFTs: number;
+    storage: string;
+    retainAuthority: boolean;
+    mutable: boolean;
+    nftStorageKey: string;
+    nftStorageGateway: string | null;
+    ipfsCredentials: ipfsCreds;
+    pinataJwt: string;
+    pinataGateway: string;
+    awsS3Bucket: string;
+    batchSize: number;
+    price: BN;
+    treasuryWallet: PublicKey;
+    splToken: PublicKey;
+    gatekeeper: null | {
+      expireOnUse: boolean;
+      gatekeeperNetwork: web3.PublicKey;
+    };
+    goLiveDate: null | BN;
+    endSettings: null | [number, BN];
+    whitelistMintSettings: null | {
+      mode: any;
+      mint: PublicKey;
+      presale: boolean;
+      discountPrice: null | BN;
+    };
+    hiddenSettings: null | {
+      name: string;
+      uri: string;
+      hash: Uint8Array;
+    };
+    uuid: string;
+    walletKeyPair: web3.Keypair;
+    anchorProgram: Program;
+    arweaveJwk: string;
+    rateLimit: number;
+    collectionMintPubkey: null | PublicKey;
+    setCollectionMint: boolean;
+    rpcUrl: null | string;
+  },
+): Promise<boolean> {
   const savedContent = loadCache(cacheName, env);
   const cacheContent = savedContent || {};
 
@@ -146,7 +145,7 @@ export async function uploadV2({
       }
 
       // initialize candy
-      log.info(`initializing candy machine`);
+      logger.info(`initializing candy machine`);
       const res = await createCandyMachineV2(
         anchorProgram,
         walletKeyPair,
@@ -186,23 +185,23 @@ export async function uploadV2({
           res.candyMachine,
           collectionMintPubkey,
         );
-        console.log('Collection: ', collection);
+        logger.info('Collection: ', collection);
         cacheContent.program.collection = collection.collectionMetadata;
       } else {
-        console.log('No collection set');
+        logger.info('No collection set');
       }
 
-      log.info(
+      logger.info(
         `initialized config for a candy machine with publickey: ${res.candyMachine.toBase58()}`,
       );
 
       saveCache(cacheName, env, cacheContent);
     } catch (exx) {
-      log.error('Error deploying config to Solana network.', exx);
+      logger.error('Error deploying config to Solana network.', exx);
       throw exx;
     }
   } else {
-    log.info(
+    logger.info(
       `config for a candy machine with publickey: ${cacheContent.program.candyMachine} has been already initialized`,
     );
   }
@@ -211,10 +210,12 @@ export async function uploadV2({
     (f: { link: string }) => !!f.link,
   ).length;
 
-  log.info(`[${uploadedItems}] out of [${totalNFTs}] items have been uploaded`);
+  logger.info(
+    `[${uploadedItems}] out of [${totalNFTs}] items have been uploaded`,
+  );
 
   if (dedupedAssetKeys.length) {
-    log.info(
+    logger.info(
       `Starting upload for [${
         dedupedAssetKeys.length
       }] items, format ${JSON.stringify(dedupedAssetKeys[0])}`,
@@ -254,11 +255,11 @@ export async function uploadV2({
         );
 
         saveCache(cacheName, env, cacheContent);
-        log.info('Saved bundle upload result to cache.');
+        logger.info('Saved bundle upload result to cache.');
       }
-      log.info('Upload done. Cleaning up...');
+      logger.info('Upload done. Cleaning up...');
       if (storage === StorageType.ArweaveSol && env !== 'devnet') {
-        log.info('Waiting 5 seconds to check Bundlr balance.');
+        logger.info('Waiting 5 seconds to check Bundlr balance.');
         await sleep(5000);
         await withdrawBundlr(walletKeyPair);
       }
@@ -281,7 +282,7 @@ export async function uploadV2({
         );
 
         saveCache(cacheName, env, cacheContent);
-        log.info('Saved bundle upload result to cache.');
+        logger.info('Saved bundle upload result to cache.');
       }
     } else {
       const progressBar = new cliProgress.SingleBar(
@@ -295,7 +296,8 @@ export async function uploadV2({
       await PromisePool.withConcurrency(batchSize || 10)
         .for(dedupedAssetKeys)
         .handleError(async (err, asset) => {
-          log.error(
+          console.log(err);
+          logger.error(
             `\nError uploading ${JSON.stringify(asset)} asset (skipping)`,
             err.message,
           );
@@ -354,7 +356,7 @@ export async function uploadV2({
               case StorageType.Arweave:
               default:
                 [link, imageLink] = await arweaveUpload(
-                  null,
+                  logger,
                   walletKeyPair,
                   anchorProgram,
                   env,
@@ -367,7 +369,7 @@ export async function uploadV2({
             if (
               animation ? link && imageLink && animationLink : link && imageLink
             ) {
-              log.debug('Updating cache for ', asset.index);
+              logger.debug('Updating cache for ', asset.index);
               cacheContent.items[asset.index] = {
                 link,
                 imageLink,
@@ -387,7 +389,7 @@ export async function uploadV2({
 
   let uploadSuccessful = true;
   if (!hiddenSettings) {
-    uploadSuccessful = await writeIndices({
+    uploadSuccessful = await writeIndices(logger, {
       anchorProgram,
       cacheContent,
       cacheName,
@@ -402,10 +404,10 @@ export async function uploadV2({
     ).length;
     uploadSuccessful = uploadSuccessful && uploadedItems === totalNFTs;
   } else {
-    log.info('Skipping upload to chain as this is a hidden Candy Machine');
+    logger.info('Skipping upload to chain as this is a hidden Candy Machine');
   }
 
-  console.log(`Done. Successful = ${uploadSuccessful}.`);
+  logger.info(`Done. Successful = ${uploadSuccessful}.`);
   return uploadSuccessful;
 }
 
@@ -505,23 +507,26 @@ export function getAssetManifest(dirname: string, assetKey: string): Manifest {
  * to its manifest, if the asset was not already written according to the
  * value of `onChain` property in the Cache object, for said asset.
  */
-async function writeIndices({
-  anchorProgram,
-  cacheContent,
-  cacheName,
-  env,
-  candyMachine,
-  walletKeyPair,
-  rateLimit,
-}: {
-  anchorProgram: Program;
-  cacheContent: any;
-  cacheName: string;
-  env: any;
-  candyMachine: any;
-  walletKeyPair: web3.Keypair;
-  rateLimit: number;
-}) {
+async function writeIndices(
+  logger: Logger,
+  {
+    anchorProgram,
+    cacheContent,
+    cacheName,
+    env,
+    candyMachine,
+    walletKeyPair,
+    rateLimit,
+  }: {
+    anchorProgram: Program;
+    cacheContent: any;
+    cacheName: string;
+    env: any;
+    candyMachine: any;
+    walletKeyPair: web3.Keypair;
+    rateLimit: number;
+  },
+) {
   let uploadSuccessful = true;
   const keys = Object.keys(cacheContent.items);
   const poolArray = [];
@@ -551,7 +556,7 @@ async function writeIndices({
       poolArray.push({ index, configLines });
     }
   }
-  log.info(`Writing all indices in ${poolArray.length} transactions...`);
+  logger.info(`Writing all indices in ${poolArray.length} transactions...`);
   const progressBar = new cliProgress.SingleBar(
     {
       format: 'Progress: [{bar}] {percentage}% | {value}/{total}',
@@ -575,7 +580,7 @@ async function writeIndices({
         signers: [walletKeyPair],
       },
     );
-    log.debug(response);
+    logger.debug(response);
     configLines.forEach((i) => {
       cacheContent.items[keys[i]] = {
         ...cacheContent.items[keys[i]],
@@ -590,7 +595,7 @@ async function writeIndices({
   await PromisePool.withConcurrency(rateLimit || 5)
     .for(poolArray)
     .handleError(async (err, { index, configLines }) => {
-      log.error(
+      logger.error(
         `\nFailed writing indices ${index}-${
           keys[configLines[configLines.length - 1]]
         }: ${err.message}`,
@@ -604,14 +609,6 @@ async function writeIndices({
   progressBar.stop();
   saveCache(cacheName, env, cacheContent);
   return uploadSuccessful;
-}
-
-/**
- * Save the Candy Machine's authority (public key) to the Cache object / file.
- */
-function setAuthority(publicKey, cache, cacheName, env) {
-  cache.authority = publicKey.toBase58();
-  saveCache(cacheName, env, cache);
 }
 
 /**
@@ -647,184 +644,3 @@ type UploadParams = {
   arweaveJwk: string;
   batchSize: number;
 };
-export async function upload({
-  files,
-  cacheName,
-  env,
-  keypair,
-  storage,
-  rpcUrl,
-  ipfsCredentials,
-  awsS3Bucket,
-  arweaveJwk,
-  batchSize,
-}: UploadParams): Promise<boolean> {
-  // Read the content of the Cache file into the Cache object, initialize it
-  // otherwise.
-  const cache: Cache | undefined = loadCache(cacheName, env);
-  if (cache === undefined) {
-    log.error(
-      'Existing cache not found. To create a new candy machine, please use candy machine v2.',
-    );
-    throw new Error('Existing cache not found');
-  }
-
-  // Make sure config exists in cache
-  if (!cache.program?.config) {
-    log.error(
-      'existing config account not found in cache. To create a new candy machine, please use candy machine v2.',
-    );
-    throw new Error('config account not found in cache');
-  }
-  const config = new PublicKey(cache.program.config);
-
-  cache.items = cache.items || {};
-
-  // Retrieve the directory path where the assets are located.
-  const dirname = path.dirname(files[0]);
-  // Compile a sorted list of assets which need to be uploaded.
-  const dedupedAssetKeys = getAssetKeysNeedingUpload(cache.items, files);
-
-  // Initialize variables that might be needed for uploded depending on storage
-  // type.
-  // These will be needed anyway either to initialize the
-  // Candy Machine Custom Program configuration, or to write the assets
-  // to the deployed configuration on chain.
-  const walletKeyPair = loadWalletKey(keypair);
-  const anchorProgram = await loadCandyProgram(walletKeyPair, env, rpcUrl);
-  // Some assets need to be uploaded.
-  if (dedupedAssetKeys.length) {
-    // Arweave Native storage leverages Arweave Bundles.
-    // It allows to ncapsulate multiple independent data transactions
-    // into a single top level transaction,
-    // which pays the reward for all bundled data.
-    // https://github.com/Bundlr-Network/arbundles
-    // Each bundle consists of one or multiple asset filepair (PNG + JSON).
-    if (
-      storage === StorageType.ArweaveBundle ||
-      storage === StorageType.ArweaveSol
-    ) {
-      // Initialize the Arweave Bundle Upload Generator.
-      // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Generator
-      const arweaveBundleUploadGenerator = makeArweaveBundleUploadGenerator(
-        storage,
-        dirname,
-        dedupedAssetKeys,
-        env,
-        storage === StorageType.ArweaveBundle
-          ? JSON.parse((await readFile(arweaveJwk)).toString())
-          : undefined,
-        storage === StorageType.ArweaveSol ? walletKeyPair : undefined,
-        batchSize,
-      );
-
-      // Loop over every uploaded bundle of asset filepairs (PNG + JSON)
-      // and save the results to the Cache object, persist it to the Cache file.
-      for await (const value of arweaveBundleUploadGenerator) {
-        const { cacheKeys, arweavePathManifestLinks, updatedManifests } = value;
-
-        updateCacheAfterUpload(
-          cache,
-          cacheKeys,
-          arweavePathManifestLinks,
-          updatedManifests.map((m) => m.name),
-        );
-        saveCache(cacheName, env, cache);
-        log.info('Saved bundle upload result to cache.');
-      }
-      log.info('Upload done.');
-    } else {
-      // For other storage methods, we upload the files individually.
-      const SIZE = dedupedAssetKeys.length;
-      const tick = SIZE / 100; // print every one percent
-      let lastPrinted = 0;
-
-      await Promise.all(
-        chunks(Array.from(Array(SIZE).keys()), batchSize || 50).map(
-          async (allIndicesInSlice) => {
-            for (let i = 0; i < allIndicesInSlice.length; i++) {
-              const assetKey = dedupedAssetKeys[i];
-              const image = path.join(
-                dirname,
-                `${assetKey.index}${assetKey.mediaExt}`,
-              );
-              const manifest = getAssetManifest(dirname, assetKey.index);
-              let animation = undefined;
-              if ('animation_url' in manifest) {
-                animation = path.join(dirname, `${manifest.animation_url}`);
-              }
-              const manifestBuffer = Buffer.from(JSON.stringify(manifest));
-              if (i >= lastPrinted + tick || i === 0) {
-                lastPrinted = i;
-                log.info(`Processing asset: ${assetKey}`);
-              }
-
-              let link, imageLink, animationLink;
-              try {
-                switch (storage) {
-                  case StorageType.Ipfs:
-                    [link, imageLink, animationLink] = await ipfsUpload(
-                      ipfsCredentials,
-                      image,
-                      animation,
-                      manifestBuffer,
-                    );
-                    break;
-                  case StorageType.Aws:
-                    [link, imageLink, animationLink] = await awsUpload(
-                      awsS3Bucket,
-                      image,
-                      animation,
-                      manifestBuffer,
-                    );
-                    break;
-                  case StorageType.Arweave:
-                  default:
-                    [link, imageLink] = await arweaveUpload(
-                      null,
-                      walletKeyPair,
-                      anchorProgram,
-                      env,
-                      image,
-                      manifestBuffer,
-                      manifest,
-                      i,
-                    );
-                }
-                if (
-                  animation
-                    ? link && imageLink && animationLink
-                    : link && imageLink
-                ) {
-                  log.debug('Updating cache for ', assetKey);
-                  cache.items[assetKey.index] = {
-                    link,
-                    imageLink,
-                    name: manifest.name,
-                    onChain: false,
-                  };
-                  saveCache(cacheName, env, cache);
-                }
-              } catch (err) {
-                log.error(`Error uploading file ${assetKey}`, err);
-                throw err;
-              }
-            }
-          },
-        ),
-      );
-    }
-
-    setAuthority(walletKeyPair.publicKey, cache, cacheName, env);
-
-    return writeIndices({
-      anchorProgram,
-      cacheContent: cache,
-      cacheName,
-      env,
-      candyMachine: config,
-      walletKeyPair,
-      rateLimit: 10,
-    });
-  }
-}
