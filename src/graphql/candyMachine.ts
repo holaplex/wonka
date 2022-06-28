@@ -430,7 +430,7 @@ export const CandyMachineUploadLogsQuery = queryField(
         .catch(() => false);
       // Check logs file exists
       if (!fileExists) {
-        return {};
+        return [{ message: 'Process handle not found (log file not found)' }];
       }
       // Read logs file
       const logs = `[${(await fs.readFile(logsPath, 'utf8'))
