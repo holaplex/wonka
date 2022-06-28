@@ -299,17 +299,6 @@ const runUploadV2 = async (
       },
     },
   );
-
-  // finally {
-  //   await new Promise<void>((resolve, reject) => {
-  //     rimraf(`${dirname}/${processId}`, (err) => {
-  //       if (err) {
-  //         reject(err);
-  //       }
-  //       resolve();
-  //     });
-  //   });
-  // }
 };
 
 export const CandyMachineUploadResult = objectType({
@@ -421,6 +410,9 @@ export const CandyMachineUploadLogsResult = objectType({
   definition(t) {
     t.nonNull.string('processId', {
       description: 'Process id handle',
+    });
+    t.nonNull.string('logs', {
+      description: 'Logs',
     });
   },
 });
