@@ -368,14 +368,14 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
     const processId = uuidv4();
     const logger = winston.createLogger({
       level: 'info',
-      format: winston.format.json(),
+      format: winston.format.timestamp(),
       transports: [
         new winston.transports.Console({
-          format: winston.format.simple(),
+          format: winston.format.timestamp(),
         }),
         new winston.transports.File({
-          format: winston.format.json(),
-          filename: `${dirname}/logs/${processId}.json`,
+          format: winston.format.timestamp(),
+          filename: `${dirname}/logs/${processId}.log`,
         }),
       ],
     });
@@ -409,10 +409,20 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
   },
 });
 
+export const CandyMachineUploadLogsResult = objectType({
+  name: 'CandyMachineUploadLogsResult',
+  description: 'Result from calling candy machine upload logs',
+  definition(t) {
+    t.nonNull.string('processId', {
+      description: 'Process id handle',
+    });
+  },
+});
+
 export const CandyMachineUploadLogsQuery = queryField(
   'candyMachineUploadLogs',
   {
-    type: 'JSON',
+    type: 'CandyMachineUploadLogsResult',
     description: 'Get logs for a candy machine upload process',
     args: {
       processId: nonNull(
@@ -420,10 +430,15 @@ export const CandyMachineUploadLogsQuery = queryField(
           description: 'Process id handle',
         }),
       ),
+      logs: nonNull(
+        stringArg({
+          description: 'Logs',
+        }),
+      ),
     },
     async resolve(_, args, _ctx: YogaInitialContext) {
       const { processId } = args;
-      const logsPath = `${dirname}/logs/${processId}.json`;
+      const logsPath = `${dirname}/logs/${processId}.log`;
       const fileExists = await fs
         .stat(logsPath)
         .then(() => true)
@@ -433,10 +448,8 @@ export const CandyMachineUploadLogsQuery = queryField(
         return [{ message: 'Process handle not found (log file not found)' }];
       }
       // Read logs file
-      const logs = `[${(await fs.readFile(logsPath, 'utf8'))
-        .split('\n')
-        .join(',')}]`;
-      return JSON.parse(logs);
+      const logs = await fs.readFile(logsPath, 'utf8');
+      return { processId, logs };
     },
   },
 );

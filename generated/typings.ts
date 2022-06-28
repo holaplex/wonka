@@ -72,6 +72,9 @@ export interface NexusGenScalars {
 }
 
 export interface NexusGenObjects {
+  CandyMachineUploadLogsResult: { // root type
+    processId: string; // String!
+  }
   CandyMachineUploadResult: { // root type
     processId: string; // String!
   }
@@ -96,6 +99,9 @@ export type NexusGenRootTypes = NexusGenObjects
 export type NexusGenAllTypes = NexusGenRootTypes & NexusGenScalars
 
 export interface NexusGenFieldTypes {
+  CandyMachineUploadLogsResult: { // field return type
+    processId: string; // String!
+  }
   CandyMachineUploadResult: { // field return type
     processId: string; // String!
   }
@@ -111,11 +117,14 @@ export interface NexusGenFieldTypes {
     mintNft: NexusGenRootTypes['MintNftResult'] | null; // MintNftResult
   }
   Query: { // field return type
-    candyMachineUploadLogs: NexusGenScalars['JSON'] | null; // JSON
+    candyMachineUploadLogs: NexusGenRootTypes['CandyMachineUploadLogsResult'] | null; // CandyMachineUploadLogsResult
   }
 }
 
 export interface NexusGenFieldTypeNames {
+  CandyMachineUploadLogsResult: { // field return type name
+    processId: 'String'
+  }
   CandyMachineUploadResult: { // field return type name
     processId: 'String'
   }
@@ -131,7 +140,7 @@ export interface NexusGenFieldTypeNames {
     mintNft: 'MintNftResult'
   }
   Query: { // field return type name
-    candyMachineUploadLogs: 'JSON'
+    candyMachineUploadLogs: 'CandyMachineUploadLogsResult'
   }
 }
 
@@ -157,6 +166,7 @@ export interface NexusGenArgTypes {
   }
   Query: {
     candyMachineUploadLogs: { // args
+      logs: string; // String!
       processId: string; // String!
     }
   }

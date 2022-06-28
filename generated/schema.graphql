@@ -2,6 +2,12 @@
 ### Do not make changes to this file directly
 
 
+"""Result from calling candy machine upload logs"""
+type CandyMachineUploadLogsResult {
+  """Process id handle"""
+  processId: String!
+}
+
 """Result from calling candy machine upload"""
 type CandyMachineUploadResult {
   """Process id handle"""
@@ -123,7 +129,10 @@ input NftProperties {
 type Query {
   """Get logs for a candy machine upload process"""
   candyMachineUploadLogs(
+    """Logs"""
+    logs: String!
+
     """Process id handle"""
     processId: String!
-  ): JSON
+  ): CandyMachineUploadLogsResult
 }
