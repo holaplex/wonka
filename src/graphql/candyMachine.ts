@@ -39,12 +39,7 @@ const runUploadV2 = async (
     collectionMint: string;
     config: any;
     callbackUrl: null | string;
-    guid: null | string;
-    encryptedKeypair: {
-      boxedMessage: string;
-      clientPublicKey: string;
-      nonce: string;
-    };
+    guid?: string;
     keyPair: string;
     env: string;
     filesZipUrl: string;
@@ -320,7 +315,7 @@ const runUploadV2 = async (
 export const CandyMachineUploadResult = objectType({
   name: 'CandyMachineUploadResult',
   description: 'Result from calling candy machine upload',
-  definition (t) {
+  definition(t) {
     t.nonNull.string('processId', {
       description: 'Process id handle',
     });
@@ -330,19 +325,16 @@ export const CandyMachineUploadResult = objectType({
 export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
   type: 'CandyMachineUploadResult',
   args: {
-    // encryptedKeypair: nonNull(
-    //   arg({
-    //     type: 'EncryptedMessage',
-    //   }),
-    // ),
     keyPair: nonNull(
       stringArg({
         description: 'Wallet keypair',
       }),
     ),
-    callback: stringArg({
-      description: 'Candy Machine Creation callback url',
-    }),
+    callbackUrl: nonNull(
+      stringArg({
+        description: 'Candy Machine Creation callback URL',
+      }),
+    ),
     config: nonNull(
       arg({
         type: 'JSON',
@@ -378,7 +370,7 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
       }),
     ),
   },
-  async resolve (_, args, _ctx: YogaInitialContext) {
+  async resolve(_, args, _ctx: YogaInitialContext) {
     const processId = uuidv4();
     const logger = winston.createLogger({
       level: 'info',
@@ -435,7 +427,7 @@ export const CandyMachineUploadLogsQuery = queryField(
         }),
       ),
     },
-    async resolve (_, args, _ctx: YogaInitialContext) {
+    async resolve(_, args, _ctx: YogaInitialContext) {
       const { processId } = args;
       const logsPath = `${dirname}/logs/${processId}.json`;
       const fileExists = await fs
