@@ -15,7 +15,6 @@ import fs from 'fs/promises';
 import { getType } from 'mime';
 import winston from 'winston';
 import rimraf from 'rimraf';
-
 import { uploadV2 } from '../../cli/commands/upload-logged.js';
 import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
 import { loadCandyProgramV2 } from '../../cli/helpers/accounts.js';
@@ -39,6 +38,8 @@ const runUploadV2 = async (
   args: {
     collectionMint: string;
     config: any;
+    callbackUrl: null | string;
+    guid?: string;
     keyPair: string;
     env: string;
     filesZipUrl: string;
@@ -280,6 +281,8 @@ const runUploadV2 = async (
           collectionMintPubkey,
           setCollectionMint,
           rpcUrl: rpc,
+          callbackUrl: args.callbackUrl,
+          guid: args.guid,
         });
 
         return { processId };
@@ -322,14 +325,14 @@ export const CandyMachineUploadResult = objectType({
 export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
   type: 'CandyMachineUploadResult',
   args: {
-    // encryptedKeypair: nonNull(
-    //   arg({
-    //     type: 'EncryptedMessage',
-    //   }),
-    // ),
     keyPair: nonNull(
       stringArg({
         description: 'Wallet keypair',
+      }),
+    ),
+    callbackUrl: nonNull(
+      stringArg({
+        description: 'Candy Machine Creation callback URL',
       }),
     ),
     config: nonNull(
@@ -353,6 +356,9 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         description: 'Zip file url with the assets',
       }),
     ),
+    guid: stringArg({
+      description: 'Campus GUID',
+    }),
     rpc: nonNull(
       stringArg({
         description: 'RPC To use, can point to devnet | mainnet',

@@ -48,6 +48,9 @@ type MintNftResult {
 type Mutation {
   authenticatedMutation(encryptedMessage: EncryptedMessage!): EncryptedMessageResult
   candyMachineUpload(
+    """Candy Machine Creation callback URL"""
+    callbackUrl: String!
+
     """Collection mint pubkey"""
     collectionMint: String!
 
@@ -59,6 +62,9 @@ type Mutation {
 
     """Zip file url with the assets"""
     filesZipUrl: String!
+
+    """Campus GUID"""
+    guid: String
 
     """Wallet keypair"""
     keyPair: String!

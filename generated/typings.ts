@@ -150,10 +150,12 @@ export interface NexusGenArgTypes {
       encryptedMessage: NexusGenInputs['EncryptedMessage']; // EncryptedMessage!
     }
     candyMachineUpload: { // args
+      callbackUrl: string; // String!
       collectionMint: string; // String!
       config: NexusGenScalars['JSON']; // JSON!
       env: string; // String!
       filesZipUrl: string; // String!
+      guid?: string | null; // String
       keyPair: string; // String!
       rpc: string; // String!
       setCollectionMint: boolean; // Boolean!

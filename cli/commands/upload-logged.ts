@@ -4,7 +4,7 @@ import path from 'path';
 import { createCandyMachineV2 } from '../helpers/accounts';
 import { PublicKey } from '@solana/web3.js';
 import { BN, Program, web3 } from '@project-serum/anchor';
-
+import Axios from 'axios';
 import fs from 'fs';
 
 import { PromisePool } from '@supercharge/promise-pool';
@@ -58,6 +58,8 @@ export async function uploadV2(
     collectionMintPubkey,
     setCollectionMint,
     rpcUrl,
+    callbackUrl,
+    guid,
   }: {
     files: string[];
     cacheName: string;
@@ -93,6 +95,7 @@ export async function uploadV2(
       uri: string;
       hash: Uint8Array;
     };
+    guid: null | string;
     uuid: string;
     walletKeyPair: web3.Keypair;
     anchorProgram: Program;
@@ -101,6 +104,7 @@ export async function uploadV2(
     collectionMintPubkey: null | PublicKey;
     setCollectionMint: boolean;
     rpcUrl: null | string;
+    callbackUrl: string;
   },
 ): Promise<boolean> {
   const savedContent = loadCache(cacheName, env);
@@ -176,6 +180,7 @@ export async function uploadV2(
       );
       cacheContent.program.uuid = res.uuid;
       cacheContent.program.candyMachine = res.candyMachine.toBase58();
+      cacheContent.program.guid = guid;
       candyMachine = res.candyMachine;
 
       if (setCollectionMint) {
@@ -405,6 +410,11 @@ export async function uploadV2(
     uploadSuccessful = uploadSuccessful && uploadedItems === totalNFTs;
   } else {
     logger.info('Skipping upload to chain as this is a hidden Candy Machine');
+  }
+
+  if (callbackUrl && guid){
+    logger.info(`Sending post request to Callback URL: ${callbackUrl}`)
+    await Axios.post(callbackUrl, {candyMachineId: candyMachine, creator: walletKeyPair.publicKey.toBase58(), guid:  guid});
   }
 
   logger.info(`Done. Successful = ${uploadSuccessful}.`);
