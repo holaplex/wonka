@@ -171,9 +171,12 @@ const runUploadV2 = async (
         const zipFile = `${dirname}/${processId}/files.zip`;
 
         if (!dirExists) {
+          logger.info('Unzipping');
           await mkdirp(`${dirname}/${processId}`);
           await download(filesZipUrl, zipFile);
           await unzip(zipFile, zipFilesDir);
+        } else {
+          logger.info('Directory already exists');
         }
 
         let files = await fs.readdir(zipFilesDir);
@@ -252,6 +255,7 @@ const runUploadV2 = async (
           walletKeyPair,
         );
 
+        logger.info('About to start uploadV2');
         await uploadV2(logger, {
           files: supportedFiles,
           cacheName: processId,
@@ -286,6 +290,7 @@ const runUploadV2 = async (
           callbackUrl: args.callbackUrl,
           guid: args.guid,
         });
+        logger.info('Finished uploadV2');
 
         return { processId };
       } catch (err) {
@@ -296,6 +301,7 @@ const runUploadV2 = async (
       factor: 3,
       retries: 3,
       onRetry(e, attempt) {
+        logger.info('Retrying');
         logger.error(e?.message ?? 'UNKNOWN_ERR');
         logger.error(`Retrying... Attempt ${attempt}`);
       },
@@ -376,19 +382,6 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         format: winston.format.simple(),
       }));
     }
-    // const logger = winston.createLogger({
-    //   level: 'info',
-    //   format: winston.format.label({ label: processId }),
-    //   transports: [
-    //     new winston.transports.Console({
-    //       format: winston.format.label({ label: processId }),
-    //     }),
-    //     new winston.transports.File({
-    //       format: winston.format.label({ label: processId }),
-    //       filename: `${dirname}/logs/${processId}.txt`,
-    //     }),
-    //   ],
-    // });
     if (
       !(await fs
         .stat(CACHE_PATH)
@@ -404,6 +397,7 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         logger.error(err);
       })
       .finally(async () => {
+        logger.info('Cleaning up');
         await new Promise<void>((resolve, reject) => {
           rimraf(`${dirname}/${processId}`, (err) => {
             if (err) {
