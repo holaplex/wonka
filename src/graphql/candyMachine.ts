@@ -56,10 +56,12 @@ const runUploadV2 = async (
     env,
     keyPair,
   } = args;
+  logger.log('info', 'Before start...');
   const collectionMint = new web3.PublicKey(collectionMintParam);
   await retry(
     async (bail) => {
       try {
+        logger.info('Starting...');
         const bytes = bs58.decode(keyPair);
         const walletKeyPair = web3.Keypair.fromSecretKey(
           Uint8Array.from(bytes),
@@ -363,18 +365,30 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
     const processId = uuidv4();
     const logger = winston.createLogger({
       level: 'info',
-      format: winston.format.timestamp(),
+      format: winston.format.json(),
+      defaultMeta: { processId },
       transports: [
-        new winston.transports.Console({
-          format: winston.format.timestamp(),
-        }),
-        new winston.transports.File({
-          format: winston.format.timestamp(),
-          filename: `${dirname}/logs/${processId}.log`,
-        }),
+        new winston.transports.File({ filename: `${dirname}/logs/${processId}.txt` }),
       ],
     });
-
+    if (process.env.NODE_ENV !== 'production') {
+      logger.add(new winston.transports.Console({
+        format: winston.format.simple(),
+      }));
+    }
+    // const logger = winston.createLogger({
+    //   level: 'info',
+    //   format: winston.format.label({ label: processId }),
+    //   transports: [
+    //     new winston.transports.Console({
+    //       format: winston.format.label({ label: processId }),
+    //     }),
+    //     new winston.transports.File({
+    //       format: winston.format.label({ label: processId }),
+    //       filename: `${dirname}/logs/${processId}.txt`,
+    //     }),
+    //   ],
+    // });
     if (
       !(await fs
         .stat(CACHE_PATH)
@@ -436,7 +450,7 @@ export const CandyMachineUploadLogsQuery = queryField(
     },
     async resolve(_, args, _ctx: YogaInitialContext) {
       const { processId } = args;
-      const logsPath = `${dirname}/logs/${processId}.log`;
+      const logsPath = `${dirname}/logs/${processId}.txt`;
       const fileExists = await fs
         .stat(logsPath)
         .then(() => true)
