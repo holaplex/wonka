@@ -442,11 +442,6 @@ export const CandyMachineUploadLogsQuery = queryField(
           description: 'Process id handle',
         }),
       ),
-      logs: nonNull(
-        stringArg({
-          description: 'Logs',
-        }),
-      ),
     },
     async resolve(_, args, _ctx: YogaInitialContext) {
       const { processId } = args;

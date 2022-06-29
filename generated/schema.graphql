@@ -138,9 +138,6 @@ input NftProperties {
 type Query {
   """Get logs for a candy machine upload process"""
   candyMachineUploadLogs(
-    """Logs"""
-    logs: String!
-
     """Process id handle"""
     processId: String!
   ): CandyMachineUploadLogsResult

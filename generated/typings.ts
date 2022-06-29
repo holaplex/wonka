@@ -171,7 +171,6 @@ export interface NexusGenArgTypes {
   }
   Query: {
     candyMachineUploadLogs: { // args
-      logs: string; // String!
       processId: string; // String!
     }
   }
