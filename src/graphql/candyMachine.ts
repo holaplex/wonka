@@ -39,12 +39,7 @@ const runUploadV2 = async (
     collectionMint: string;
     config: any;
     callbackUrl: null | string;
-    guid: null | string;
-    encryptedKeypair: {
-      boxedMessage: string;
-      clientPublicKey: string;
-      nonce: string;
-    };
+    guid?: string;
     keyPair: string;
     env: string;
     filesZipUrl: string;
@@ -61,10 +56,12 @@ const runUploadV2 = async (
     env,
     keyPair,
   } = args;
+  logger.log('info', 'Before start...');
   const collectionMint = new web3.PublicKey(collectionMintParam);
   await retry(
     async (bail) => {
       try {
+        logger.info('Starting...');
         const bytes = bs58.decode(keyPair);
         const walletKeyPair = web3.Keypair.fromSecretKey(
           Uint8Array.from(bytes),
@@ -304,23 +301,12 @@ const runUploadV2 = async (
       },
     },
   );
-
-  // finally {
-  //   await new Promise<void>((resolve, reject) => {
-  //     rimraf(`${dirname}/${processId}`, (err) => {
-  //       if (err) {
-  //         reject(err);
-  //       }
-  //       resolve();
-  //     });
-  //   });
-  // }
 };
 
 export const CandyMachineUploadResult = objectType({
   name: 'CandyMachineUploadResult',
   description: 'Result from calling candy machine upload',
-  definition (t) {
+  definition(t) {
     t.nonNull.string('processId', {
       description: 'Process id handle',
     });
@@ -330,19 +316,16 @@ export const CandyMachineUploadResult = objectType({
 export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
   type: 'CandyMachineUploadResult',
   args: {
-    // encryptedKeypair: nonNull(
-    //   arg({
-    //     type: 'EncryptedMessage',
-    //   }),
-    // ),
     keyPair: nonNull(
       stringArg({
         description: 'Wallet keypair',
       }),
     ),
-    callback: stringArg({
-      description: 'Candy Machine Creation callback url',
-    }),
+    callbackUrl: nonNull(
+      stringArg({
+        description: 'Candy Machine Creation callback URL',
+      }),
+    ),
     config: nonNull(
       arg({
         type: 'JSON',
@@ -378,22 +361,34 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
       }),
     ),
   },
-  async resolve (_, args, _ctx: YogaInitialContext) {
+  async resolve(_, args, _ctx: YogaInitialContext) {
     const processId = uuidv4();
     const logger = winston.createLogger({
       level: 'info',
       format: winston.format.json(),
+      defaultMeta: { processId },
       transports: [
-        new winston.transports.Console({
-          format: winston.format.simple(),
-        }),
-        new winston.transports.File({
-          format: winston.format.json(),
-          filename: `${dirname}/logs/${processId}.json`,
-        }),
+        new winston.transports.File({ filename: `${dirname}/logs/${processId}.txt` }),
       ],
     });
-
+    if (process.env.NODE_ENV !== 'production') {
+      logger.add(new winston.transports.Console({
+        format: winston.format.simple(),
+      }));
+    }
+    // const logger = winston.createLogger({
+    //   level: 'info',
+    //   format: winston.format.label({ label: processId }),
+    //   transports: [
+    //     new winston.transports.Console({
+    //       format: winston.format.label({ label: processId }),
+    //     }),
+    //     new winston.transports.File({
+    //       format: winston.format.label({ label: processId }),
+    //       filename: `${dirname}/logs/${processId}.txt`,
+    //     }),
+    //   ],
+    // });
     if (
       !(await fs
         .stat(CACHE_PATH)
@@ -423,10 +418,23 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
   },
 });
 
+export const CandyMachineUploadLogsResult = objectType({
+  name: 'CandyMachineUploadLogsResult',
+  description: 'Result from calling candy machine upload logs',
+  definition(t) {
+    t.nonNull.string('processId', {
+      description: 'Process id handle',
+    });
+    t.nonNull.string('logs', {
+      description: 'Logs',
+    });
+  },
+});
+
 export const CandyMachineUploadLogsQuery = queryField(
   'candyMachineUploadLogs',
   {
-    type: 'JSON',
+    type: 'CandyMachineUploadLogsResult',
     description: 'Get logs for a candy machine upload process',
     args: {
       processId: nonNull(
@@ -435,22 +443,20 @@ export const CandyMachineUploadLogsQuery = queryField(
         }),
       ),
     },
-    async resolve (_, args, _ctx: YogaInitialContext) {
+    async resolve(_, args, _ctx: YogaInitialContext) {
       const { processId } = args;
-      const logsPath = `${dirname}/logs/${processId}.json`;
+      const logsPath = `${dirname}/logs/${processId}.txt`;
       const fileExists = await fs
         .stat(logsPath)
         .then(() => true)
         .catch(() => false);
       // Check logs file exists
       if (!fileExists) {
-        return {};
+        return [{ message: 'Process handle not found (log file not found)' }];
       }
       // Read logs file
-      const logs = `[${(await fs.readFile(logsPath, 'utf8'))
-        .split('\n')
-        .join(',')}]`;
-      return JSON.parse(logs);
+      const logs = await fs.readFile(logsPath, 'utf8');
+      return { processId, logs };
     },
   },
 );
