@@ -16,6 +16,10 @@ const schema = makeSchema({
 });
 
 const server = createServer({
+  maskedErrors: {
+    handleParseErrors: false,
+    handleValidationErrors: false,
+  },
   schema,
   port: PORT,
   https: process.env.APP_ENV! !== 'development',
