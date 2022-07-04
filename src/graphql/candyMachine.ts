@@ -9,7 +9,7 @@ import {
 } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
 import { web3 } from '@project-serum/anchor';
-import { uuid as uuidv4 } from 'uuidv4';
+import { uuid as uuidv4, isUuid } from 'uuidv4';
 import path from 'path';
 import fs from 'fs/promises';
 import { getType } from 'mime';
@@ -294,11 +294,11 @@ const runUploadV2 = async (
 
         return { processId };
       } catch (err) {
-        logger.error('Stopped due to error:', err);
+        logger.error('Errored out', err);
+        throw err;
       }
     },
     {
-      factor: 3,
       retries: 3,
       onRetry(e, attempt) {
         logger.info('Retrying');
@@ -374,13 +374,17 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
       format: winston.format.json(),
       defaultMeta: { processId },
       transports: [
-        new winston.transports.File({ filename: `${dirname}/logs/${processId}.txt` }),
+        new winston.transports.File({
+          filename: `${dirname}/logs/${processId}.txt`,
+        }),
       ],
     });
     if (process.env.NODE_ENV !== 'production') {
-      logger.add(new winston.transports.Console({
-        format: winston.format.simple(),
-      }));
+      logger.add(
+        new winston.transports.Console({
+          format: winston.format.simple(),
+        }),
+      );
     }
     if (
       !(await fs
@@ -419,8 +423,8 @@ export const CandyMachineUploadLogsResult = objectType({
     t.nonNull.string('processId', {
       description: 'Process id handle',
     });
-    t.nonNull.string('logs', {
-      description: 'Logs',
+    t.nonNull.field('logs', {
+      type: 'JSON',
     });
   },
 });
@@ -439,18 +443,36 @@ export const CandyMachineUploadLogsQuery = queryField(
     },
     async resolve(_, args, _ctx: YogaInitialContext) {
       const { processId } = args;
+      if (!isUuid(processId)) {
+        throw new Error('Invalid processId');
+      }
+
       const logsPath = `${dirname}/logs/${processId}.txt`;
       const fileExists = await fs
         .stat(logsPath)
         .then(() => true)
         .catch(() => false);
-      // Check logs file exists
+
       if (!fileExists) {
-        return [{ message: 'Process handle not found (log file not found)' }];
+        return {
+          processId,
+          logs: [{ message: 'Process handle not found (log file not found)' }],
+        };
       }
       // Read logs file
-      const logs = await fs.readFile(logsPath, 'utf8');
-      return { processId, logs };
+      const logFile = await fs.readFile(logsPath, 'utf8');
+      const logs = logFile
+        .split('\n')
+        .map((l) => {
+          try {
+            const parsed = JSON.parse(l);
+            return parsed;
+          } catch (e) {
+            return null;
+          }
+        })
+        .filter((l) => l !== null);
+      return { processId, logs: { entries: logs } };
     },
   },
 );

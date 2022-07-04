@@ -19,6 +19,7 @@ const server = createServer({
   maskedErrors: {
     handleParseErrors: false,
     handleValidationErrors: false,
+    isDev: process.env.APP_ENV! === 'development',
   },
   schema,
   port: PORT,

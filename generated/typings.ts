@@ -73,7 +73,7 @@ export interface NexusGenScalars {
 
 export interface NexusGenObjects {
   CandyMachineUploadLogsResult: { // root type
-    logs: string; // String!
+    logs: NexusGenScalars['JSON']; // JSON!
     processId: string; // String!
   }
   CandyMachineUploadResult: { // root type
@@ -101,7 +101,7 @@ export type NexusGenAllTypes = NexusGenRootTypes & NexusGenScalars
 
 export interface NexusGenFieldTypes {
   CandyMachineUploadLogsResult: { // field return type
-    logs: string; // String!
+    logs: NexusGenScalars['JSON']; // JSON!
     processId: string; // String!
   }
   CandyMachineUploadResult: { // field return type
@@ -125,7 +125,7 @@ export interface NexusGenFieldTypes {
 
 export interface NexusGenFieldTypeNames {
   CandyMachineUploadLogsResult: { // field return type name
-    logs: 'String'
+    logs: 'JSON'
     processId: 'String'
   }
   CandyMachineUploadResult: { // field return type name

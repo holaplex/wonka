@@ -4,8 +4,7 @@
 
 """Result from calling candy machine upload logs"""
 type CandyMachineUploadLogsResult {
-  """Logs"""
-  logs: String!
+  logs: JSON!
 
   """Process id handle"""
   processId: String!
