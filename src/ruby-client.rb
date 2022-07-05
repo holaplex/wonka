@@ -3,9 +3,8 @@
 
 #Imports
 #====================================================================================
-#require 'graphql-client'
-#require 'graphql/client/http'
-require 'graphlient'
+require 'graphql/client'
+require 'graphql/client/http'
 require 'json'
 puts "Starting Client"
 
@@ -16,6 +15,8 @@ argKeyPair = ARGV[0]
 argConfig = ARGV[1]
 argZipFile = ARGV[2]
 
+filesZipUrl = argZipFile
+
 keypairFile = File.open(argKeyPair)
 keypairContents = keypairFile.read()
 keypairFile.close()
@@ -24,7 +25,7 @@ configJSONFile = File.open(argConfig)
 configJSONContents = configJSONFile.read()
 configJSONFile.close()
 configJSON = JSON.parse(configJSONContents)
-callback = 'http://localhost:3000/'
+callbackUrl = 'http://localhost:3000/'
 guid = nil
 env = 'devnet'
 rpc = 'https://autumn-falling-bush.solana-devnet.quiknode.pro/d780e0b6a44a10fbe4982403eb88b4e58cfaa78a/'
@@ -33,30 +34,32 @@ setCollectionMint = true
 
 #Server/Query
 #========================================================================================
-Client = Graphlient::Client.new(http://127.0.0.1:4000/graphql)
+http = GraphQL::Client::HTTP.new('http://127.0.0.1:4000/graphql')
+schema = GraphQL::Client.load_schema(http)
+client = GraphQL::Client.new(schema: schema, execute: http)
 
-puts "connection established"
-query = <<-GRAPHQL
-mutation createCandyMachine(
-  $keyPair: String!
-  $callback: String
-  $config: JSON!
-  $collectionMint: String!
-  $setCollectionMint: Boolean!
-  $filesZipUrl: String!
-  $guid: String
-  $rpc: String!
+puts "Connection established"
+Query = client.parse <<~'GRAPHQL'
+mutation(
+  $keyPair: String!,
+  $callbackUrl: String!,
+  $config: JSON!,
+  $collectionMint: String!,
+  $setCollectionMint: Boolean!,
+  $filesZipUrl: String!,
+  $guid: String,
+  $rpc: String!,
   $env: String!
 ) {
   candyMachineUpload(
-    keyPair: $keyPair
-    callback: $callback
-    config: $config
-    collectionMint: $collectionMint
-    setCollectionMint: $setCollectionMint
-    filesZipUrl: $argZipFile
-    guid: $guid
-    rpc: $rpc
+    keyPair: $keyPair,
+    callbackUrl: $callbackUrl,
+    config: $config,
+    collectionMint: $collectionMint,
+    setCollectionMint: $setCollectionMint,
+    filesZipUrl: $filesZipUrl,
+    guid: $guid,
+    rpc: $rpc,
     env: $env
   ) {
     processId
@@ -66,16 +69,16 @@ GRAPHQL
 
 variables = {
   keyPair: keypairContents,
-  callback: callback,
+  callbackUrl: callbackUrl,
   config: configJSON,
-  collectionMint: collection,
+  collectionMint: collectionMint,
   setCollectionMint: setCollectionMint,
-  filesZipUrl: zipFileUrl,
+  filesZipUrl: filesZipUrl,
   guid: guid,
   rpc: rpc,
   env: env,
 }
 
-puts "sending query"
-result = Client.query(query, variables)
+puts "Sending Query"
+result = client.query(Query, variables: variables)
 puts result

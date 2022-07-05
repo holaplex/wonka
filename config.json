@@ -1,0 +1,24 @@
+{
+    "price": 0.001,
+    "number": 500,
+    "gatekeeper": null,
+    "creators": [
+      {
+        "address": "PUBLIC_KEY_RECEIVER_OF_ROYALTIES",
+        "share": 100
+      }
+    ],
+    "solTreasuryAccount": "PUBLIC_KEY_RECEIVER_OF_SALES",
+    "splTokenAccount": null,
+    "splToken": null,
+    "goLiveDate": "30 Jun 2022 22:05:43 +0000",
+    "endSettings": null,
+    "whitelistMintSettings": null,
+    "hiddenSettings": null,
+    "uploadMethod": "Bundlr",
+    "retainAuthority": true,
+    "isMutable": true,
+    "awsS3Bucket": null,
+    "symbol": "SOME_SYMBOL",
+    "sellerFeeBasisPoints": 500
+  }

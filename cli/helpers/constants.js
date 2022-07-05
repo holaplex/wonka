@@ -74,7 +74,7 @@ exports.CONFIG_ARRAY_START_V2 = 8 + // key
     1; // gatekeeper
 exports.CONFIG_LINE_SIZE_V2 = 4 + 32 + 4 + 200;
 exports.CONFIG_LINE_SIZE = 4 + 32 + 4 + 200;
-exports.CACHE_PATH = './.cache';
+exports.CACHE_PATH = './cache-files';
 exports.DEFAULT_TIMEOUT = 30000;
 exports.EXTENSION_PNG = '.png';
 exports.EXTENSION_JPG = '.jpg';
