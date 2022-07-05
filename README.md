@@ -12,7 +12,7 @@ Candy Machine Factory is easy to setup for local use or to be deployed on your o
 1. Clone the repo
 2. `cd` into the folder
 3. Install dependencies with `yarn install`
-4. Edit `.env` and 
+4. Edit `.env` with the sample below
 5. Run it with `yarn dev`
 
 
