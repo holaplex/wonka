@@ -5,7 +5,6 @@ import {
   arg,
   objectType,
 } from 'nexus';
-import { YogaInitialContext } from 'graphql-yoga';
 
 import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
 
