@@ -201,7 +201,7 @@ export const MintNft = mutationField('mintNft', {
     
     // Create New NFT with the metadata
     try {
-      nft = await metaplex.nfts().create(uri);
+      nft = await metaplex.nfts().create(create_input_data);
     } catch (e) {
       return {
         message: `Error creating NFT: ${e.message}`,
