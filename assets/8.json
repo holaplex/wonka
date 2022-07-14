@@ -1,0 +1,41 @@
+{
+  "name": "9",
+  "symbol": "TST",
+  "image": "8.png",
+  "properties": {
+    "files": [
+      {
+        "uri": "8.png",
+        "type": "image/png"
+      }
+    ],
+    "category": "image",
+    "creators": [
+      {
+        "address": "FTRY1THFYyV8tBV39aiRkdx8xNYvLiEr4xB8k4R8u4op",
+        "share": 100
+      }
+    ]
+  },
+  "description": "Some test NFT",
+  "seller_fee_basis_points": 500,
+  "attributes": [
+    {
+      "trait_type": "background",
+      "value": "light-yellow"
+    },
+    {
+      "trait_type": "eyes",
+      "value": "star-eyes"
+    },
+    {
+      "trait_type": "mouth",
+      "value": "triangle-mouth"
+    },
+    {
+      "trait_type": "face",
+      "value": "grapefruit-face"
+    }
+  ],
+  "collection": {}
+}

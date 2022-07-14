@@ -57,7 +57,7 @@
     "nodemon": "^2.0.16",
     "random-bytes": "^1.0.0",
     "ruby": "^0.6.1",
-    "ts-node": "^10.8.1",
+    "ts-node": "^10.8.2",
     "tweetnacl": "^1.0.3",
     "uuidv4": "^6.2.13",
     "weighted": "^0.3.0",

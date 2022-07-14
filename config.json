@@ -1,24 +1,20 @@
 {
-    "price": 0.001,
-    "number": 500,
+    "price": 0.01,
+    "number": 10,
     "gatekeeper": null,
-    "creators": [
-      {
-        "address": "PUBLIC_KEY_RECEIVER_OF_ROYALTIES",
-        "share": 100
-      }
-    ],
-    "solTreasuryAccount": "PUBLIC_KEY_RECEIVER_OF_SALES",
+    "solTreasuryAccount": "FTRY1THFYyV8tBV39aiRkdx8xNYvLiEr4xB8k4R8u4op",
     "splTokenAccount": null,
     "splToken": null,
-    "goLiveDate": "30 Jun 2022 22:05:43 +0000",
+    "goLiveDate": 1654999999,
     "endSettings": null,
     "whitelistMintSettings": null,
     "hiddenSettings": null,
-    "uploadMethod": "Bundlr",
-    "retainAuthority": true,
-    "isMutable": true,
+    "storage": "arweave",
+    "ipfsInfuraProjectId": null,
+    "ipfsInfuraSecret": null,
     "awsS3Bucket": null,
-    "symbol": "SOME_SYMBOL",
-    "sellerFeeBasisPoints": 500
+    "nftStorageKey": null,
+    "noRetainAuthority": false,
+    "noMutable": false
   }
+  
