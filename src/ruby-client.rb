@@ -20,11 +20,13 @@ filesZipUrl = argZipFile
 keypairFile = File.open(argKeyPair)
 keypairContents = keypairFile.read()
 keypairFile.close()
+keypair = JSON.parse(keypairContents)
 
 configJSONFile = File.open(argConfig)
 configJSONContents = configJSONFile.read()
 configJSONFile.close()
 configJSON = JSON.parse(configJSONContents)
+
 callbackUrl = 'http://localhost:3000/'
 guid = nil
 env = 'devnet'
@@ -68,7 +70,7 @@ mutation(
 GRAPHQL
 
 variables = {
-  keyPair: keypairContents,
+  keyPair: keypair,
   callbackUrl: callbackUrl,
   config: configJSON,
   collectionMint: collectionMint,
