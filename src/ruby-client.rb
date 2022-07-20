@@ -20,7 +20,6 @@ filesZipUrl = argZipFile
 keypairFile = File.open(argKeyPair)
 keypairContents = keypairFile.read()
 keypairFile.close()
-keypair = JSON.parse(keypairContents)
 
 configJSONFile = File.open(argConfig)
 configJSONContents = configJSONFile.read()
@@ -70,7 +69,7 @@ mutation(
 GRAPHQL
 
 variables = {
-  keyPair: keypair,
+  keyPair: keypairFile,
   callbackUrl: callbackUrl,
   config: configJSON,
   collectionMint: collectionMint,
@@ -83,4 +82,4 @@ variables = {
 
 puts "Sending Query"
 result = client.query(Query, variables: variables)
-puts result
+puts result.data.candy_machine_upload.process_id
