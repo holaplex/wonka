@@ -476,3 +476,60 @@ export const CandyMachineUploadLogsQuery = queryField(
     },
   },
 );
+
+export const CandyMachineUploadCacheResult = objectType({
+  name: 'CandyMachineUploadCacheResult',
+  description: 'Gets a candy machine cache file.',
+  definition(t) {
+    t.nonNull.string('processId', {
+      description: 'Process id handle',
+    });
+    t.nonNull.field('cache', {
+      type: 'JSON',
+      description: 'The file contents',
+    });
+  },
+});
+
+export const CandyMachineUploadCacheQuery = queryField(
+  'candyMachineUploadCache',
+  {
+    type: 'CandyMachineUploadCacheResult',
+    description: 'Gets a candy machine cache file.',
+    args: {
+      processId: nonNull(
+        stringArg({
+          description: 'Process id handle',
+        }),
+      ),
+      env: nonNull(
+        stringArg({
+          description: 'Solana env, either mainnet-beta | devnet | testnet',
+        }),
+      ),
+    },
+    async resolve(_, args, _ctx: YogaInitialContext) {
+      const { processId, env } = args;
+      if (!isUuid(processId)) {
+        throw new Error('Invalid processId');
+      }
+
+      const cachePath = `${dirname}/cache-files/${env}-${processId}.json`;
+      const fileExists = await fs
+        .stat(cachePath)
+        .then(() => true)
+        .catch(() => false);
+
+      if (!fileExists) {
+        return {
+          processId,
+          cache: 'No cache file found',
+        };
+      }
+
+      const cache = JSON.parse(await fs.readFile(cachePath, 'utf8'));
+
+      return { processId, cache };
+    },
+  },
+);
