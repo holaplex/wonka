@@ -11,9 +11,9 @@ import {
 import { YogaInitialContext } from 'graphql-yoga';
 import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
 import { FanoutClient, MembershipModel } from '@glasseaters/hydra-sdk';
-import { Wallet } from '@project-serum/anchor';
 import { Connection, clusterApiUrl, Keypair, PublicKey } from '@solana/web3.js';
 import { NATIVE_MINT } from '@solana/spl-token';
+import { Wallet } from '@project-serum/anchor';
 
 export const CreateFanoutResult = objectType({
   name: 'CreateFanoutResult',
@@ -78,7 +78,7 @@ export const CreateFanout = mutationField('createFanout', {
   },
   async resolve (_, args, ctx: YogaInitialContext) {
     let authorityWallet: Wallet = null!;
-    const connection = new Connection(process.env.RPC_URL, 'confirmed');
+    const connection = new Connection(process.env.RPC_ENDPOINT, 'confirmed');
     let fanoutSdk: FanoutClient;
     let splFanoutAddress: PublicKey | null = null;
     let splFanoutTokenAccount: PublicKey | null = null;
@@ -228,9 +228,11 @@ export const DisperseFanout = mutationField('disperseFanout', {
       new PublicKey(args.fanoutPublicKey);
     } catch (e) {
       return {
-        message: `Error creating wallet from client secret: ${e.message}`,
+        message: `Error creating wallet from fanout address: ${e.message}`,
       };
     }
+
+    fanoutSdk = new FanoutClient(connection, payerWallet);
 
     if (args.splTokenAddress) {
       try {
@@ -256,6 +258,7 @@ export const DisperseFanout = mutationField('disperseFanout', {
       }
     } else {
       try {
+        //this is having an issue
         await fanoutSdk.distributeAll({
           fanout: new PublicKey(args.fanoutPublicKey),
           payer: payerWallet.publicKey,
