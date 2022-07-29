@@ -15,6 +15,19 @@ import { Connection, clusterApiUrl, Keypair, PublicKey } from '@solana/web3.js';
 import { NATIVE_MINT } from '@solana/spl-token';
 import { Wallet } from '@project-serum/anchor';
 
+export const SplFanout = objectType({
+  name: 'SplFanout',
+  description: 'The spl fanout result',
+  definition (t) {
+    t.nonNull.string('splTokenAddress', {
+      description: 'SPL Token Address',
+    });
+    t.nonNull.string('splTokenWallet', {
+      description: 'SPL Token Wallet',
+    });
+  }
+})
+
 export const CreateFanoutResult = objectType({
   name: 'CreateFanoutResult',
   description: 'The result for minting a NFT',
@@ -29,6 +42,10 @@ export const CreateFanoutResult = objectType({
       type: 'String',
       description: 'Solana address of the fanout',
     });
+    t.field('splFanout', {
+      type: 'SplFanout',
+      description: "Spl Fanout Details"
+    })
     t.field('splFanoutAddress', {
       type: 'String',
       description: 'Spl address of the fanout',
@@ -82,16 +99,15 @@ export const CreateFanout = mutationField('createFanout', {
         type: list('FanoutMember'),
       }),
     ),
-    splTokenAddress: arg({
-      type: 'String',
+    splTokenAddresses: arg({
+      type: list('String'),
     }),
   },
   async resolve (_, args, ctx: YogaInitialContext) {
     let authorityWallet: Wallet = null!;
     const connection = new Connection(process.env.RPC_ENDPOINT, 'confirmed');
     let fanoutSdk: FanoutClient;
-    let splFanoutAddress: PublicKey | null = null;
-    let splFanoutTokenAccount: PublicKey | null = null;
+    let splFanoutResult: {splTokenAddress: PublicKey | null, splTokenWallet: PublicKey | null }[] = [];
 
     const keyPairBytes = JSON.parse(
       decryptEncodedPayload(args.encryptedMessage),
@@ -145,21 +161,22 @@ export const CreateFanout = mutationField('createFanout', {
       };
     }
 
-    if (args.splTokenAddress) {
-      try {
-        const {
-          fanoutForMint,
-          tokenAccount,
-        } = await fanoutSdk.initializeFanoutForMint({
-          fanout: init.fanout,
-          mint: new PublicKey(args.splTokenAddress),
-        });
-        splFanoutAddress = fanoutForMint;
-        splFanoutTokenAccount = tokenAccount;
-      } catch (e) {
-        return {
-          message: `Error initializing fanout for mint: ${e.message}`,
-        };
+    if (args.splTokenAddresses.length > 0) {
+      for (var i = 0; i < args.splTokenAddresses.length; i++) {
+        try {
+          const {
+            fanoutForMint,
+            tokenAccount,
+          } = await fanoutSdk.initializeFanoutForMint({
+            fanout: init.fanout,
+            mint: new PublicKey(args.splTokenAddresses[i]),
+          });
+          splFanoutResult.push({splTokenAddress: new PublicKey(args.splTokenAddresses[i]), splTokenWallet: tokenAccount})
+        } catch (e) {
+          return {
+            message: `Error initializing fanout for mint: ${e.message}`,
+          };
+        }
       }
     }
 
@@ -180,13 +197,13 @@ export const CreateFanout = mutationField('createFanout', {
     });
 
     // Return the details of the operation
-    if (args.splTokenAddress) {
+    if (args.splTokenAddresses.length > 0) {
       return {
         message: 'Successfully created wallet',
         fanoutPublicKey: init.fanout.toBase58(),
         solanaWalletAddress: init.nativeAccount.toBase58(),
-        splFanoutAddress: splFanoutAddress.toBase58(),
-        splWalletAddress: splFanoutTokenAccount.toBase58(),
+        splFanout: splFanoutResult,
+        
       };
     }
 
@@ -211,8 +228,8 @@ export const DisperseFanout = mutationField('disperseFanout', {
         type: 'String',
       }),
     ),
-    splTokenAddress: arg({
-      type: 'String',
+    splTokenAddresses: arg({
+      type: list('String'),
     }),
   },
   async resolve (_, args, ctx: YogaInitialContext) {
@@ -244,27 +261,27 @@ export const DisperseFanout = mutationField('disperseFanout', {
 
     fanoutSdk = new FanoutClient(connection, payerWallet);
 
-    if (args.splTokenAddress) {
-      try {
-        new PublicKey(args.splTokenAddress);
-      } catch (e) {
-        return {
-          message: `Error creating publickey from splTokenAddress: ${e.message}`,
-        };
-      }
+    if (args.splTokenAddresses.length > 0) {
+      for (var i = 0; i < args.splTokenAddresses.length; i++) {
+        try {
+          new PublicKey(args.splTokenAddresses[i]);
+        } catch (e) {
+          return {
+            message: `Error creating publickey from splTokenAddress: ${e.message}`,
+          };
+        }
 
-      fanoutSdk = new FanoutClient(connection, payerWallet);
-
-      try {
-        await fanoutSdk.distributeAll({
-          fanout: new PublicKey(args.fanoutPublicKey),
-          payer: payerWallet.publicKey,
-          mint: new PublicKey(args.splTokenAddress),
-        });
-      } catch (e) {
-        return {
-          message: `Error dispersing funds: ${e.message}`,
-        };
+        try {
+          await fanoutSdk.distributeAll({
+            fanout: new PublicKey(args.fanoutPublicKey),
+            payer: payerWallet.publicKey,
+            mint: new PublicKey(args.splTokenAddresses[i]),
+          });
+        } catch (e) {
+          return {
+            message: `Error dispersing funds: ${e.message}`,
+          };
+        }
       }
     } else {
       try {
