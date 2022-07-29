@@ -40,6 +40,16 @@ export const CreateFanoutResult = objectType({
   },
 });
 
+export const DisperseFanoutResult = objectType({
+  name: 'DisperseFanoutResult',
+  description: 'The result for minting a NFT',
+  definition (t) {
+    t.nonNull.string('message', {
+      description: 'Operation message',
+    });
+  },
+});
+
 export const FanoutMember = extendInputType({
   type: 'FanoutMember',
   definition (t) {
@@ -189,7 +199,7 @@ export const CreateFanout = mutationField('createFanout', {
 });
 
 export const DisperseFanout = mutationField('disperseFanout', {
-  type: 'CreateFanoutResult',
+  type: 'DisperseFanoutResult',
   args: {
     encryptedMessage: nonNull(
       arg({
@@ -258,7 +268,6 @@ export const DisperseFanout = mutationField('disperseFanout', {
       }
     } else {
       try {
-        //this is having an issue
         await fanoutSdk.distributeAll({
           fanout: new PublicKey(args.fanoutPublicKey),
           payer: payerWallet.publicKey,
