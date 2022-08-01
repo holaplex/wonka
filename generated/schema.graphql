@@ -82,6 +82,9 @@ type Mutation {
     """solana cluster name (i.e. devnet, mainnet-beta, testnet)"""
     cluster: String!
 
+    """new NFT metadata json"""
+    newMetadataJson: NftMetadata
+
     """The nft will be updated with this metadata url"""
     newUri: String
 
@@ -104,6 +107,14 @@ input NftAttribute {
   value: String
 }
 
+input NftCreator {
+  """creator address (pubkey base58)"""
+  address: String
+
+  """creator share in basis points"""
+  share: Int
+}
+
 input NftFile {
   """Whether the file is hosted on the CDN"""
   cdn: Boolean
@@ -118,7 +129,7 @@ input NftFile {
 """Metadata for a NFT"""
 input NftMetadata {
   """Animation URL of the NFT"""
-  animation_url: String!
+  animation_url: String
 
   """Metadata for the NFT"""
   attributes: [NftAttribute]
@@ -138,6 +149,9 @@ input NftMetadata {
   """Properties of the NFT"""
   properties: NftProperties
 
+  """Seller fee basis points"""
+  seller_fee_basis_points: Int
+
   """Symbol of the NFT"""
   symbol: String!
 }
@@ -145,6 +159,9 @@ input NftMetadata {
 input NftProperties {
   """Category of the NFT"""
   category: String
+
+  """list of creators for this nft"""
+  creators: [NftCreator]
 
   """Files associated with the NFT"""
   files: [NftFile]
@@ -162,4 +179,7 @@ type Query {
 type UpdateNftResult {
   """// TODO: what should I return"""
   message: String!
+
+  """uri of uploaded JSON metadata"""
+  newUri: String
 }

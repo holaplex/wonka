@@ -37,23 +37,29 @@ export interface NexusGenInputs {
     trait_type?: string | null; // String
     value?: string | null; // String
   }
+  NftCreator: { // input type
+    address?: string | null; // String
+    share?: number | null; // Int
+  }
   NftFile: { // input type
     cdn?: boolean | null; // Boolean
     type?: string | null; // String
     uri?: string | null; // String
   }
   NftMetadata: { // input type
-    animation_url: string; // String!
+    animation_url?: string | null; // String
     attributes?: Array<NexusGenInputs['NftAttribute'] | null> | null; // [NftAttribute]
     description: string; // String!
     external_url: string; // String!
     image: string; // String!
     name: string; // String!
     properties?: NexusGenInputs['NftProperties'] | null; // NftProperties
+    seller_fee_basis_points?: number | null; // Int
     symbol: string; // String!
   }
   NftProperties: { // input type
     category?: string | null; // String
+    creators?: Array<NexusGenInputs['NftCreator'] | null> | null; // [NftCreator]
     files?: Array<NexusGenInputs['NftFile'] | null> | null; // [NftFile]
   }
 }
@@ -89,6 +95,7 @@ export interface NexusGenObjects {
   Query: {};
   UpdateNftResult: { // root type
     message: string; // String!
+    newUri?: string | null; // String
   }
 }
 
@@ -127,6 +134,7 @@ export interface NexusGenFieldTypes {
   }
   UpdateNftResult: { // field return type
     message: string; // String!
+    newUri: string | null; // String
   }
 }
 
@@ -155,6 +163,7 @@ export interface NexusGenFieldTypeNames {
   }
   UpdateNftResult: { // field return type name
     message: 'String'
+    newUri: 'String'
   }
 }
 
@@ -182,6 +191,7 @@ export interface NexusGenArgTypes {
     }
     updateNft: { // args
       cluster: string; // String!
+      newMetadataJson?: NexusGenInputs['NftMetadata'] | null; // NftMetadata
       newUri?: string | null; // String
       nftMintId: string; // String!
       payer: string; // String!
