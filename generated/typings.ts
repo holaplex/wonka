@@ -96,6 +96,8 @@ export interface NexusGenObjects {
   UpdateNftResult: { // root type
     message: string; // String!
     newUri?: string | null; // String
+    processId: string; // String!
+    success: boolean; // Boolean!
   }
 }
 
@@ -135,6 +137,8 @@ export interface NexusGenFieldTypes {
   UpdateNftResult: { // field return type
     message: string; // String!
     newUri: string | null; // String
+    processId: string; // String!
+    success: boolean; // Boolean!
   }
 }
 
@@ -164,6 +168,8 @@ export interface NexusGenFieldTypeNames {
   UpdateNftResult: { // field return type name
     message: 'String'
     newUri: 'String'
+    processId: 'String'
+    success: 'Boolean'
   }
 }
 

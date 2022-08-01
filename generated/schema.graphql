@@ -177,9 +177,15 @@ type Query {
 
 """The result for updating an NFT"""
 type UpdateNftResult {
-  """// TODO: what should I return"""
+  """a descriptive message"""
   message: String!
 
-  """uri of uploaded JSON metadata"""
+  """uri of uploaded JSON metadata, if one was uploaded"""
   newUri: String
+
+  """process id of the request which can be used to get logs"""
+  processId: String!
+
+  """true if nft update succeeded, false otherwise"""
+  success: Boolean!
 }

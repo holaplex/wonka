@@ -28,5 +28,8 @@ export const getProcessLogger = async () => {
     );
   }
 
-  return logger;
+  return {
+    logger: logger,
+    processId: processId,
+  };
 };
