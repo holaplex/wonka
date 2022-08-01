@@ -18,8 +18,6 @@ import {
 } from '@solana/web3.js';
 
 import base58 from 'bs58';
-import { JSONScalar } from './json.scalar.js';
-import { fs } from '@nftstorage/metaplex-auth/dist/src/platform.js';
 
 export const UpdateNftResult = objectType({
   name: 'UpdateNftResult',
