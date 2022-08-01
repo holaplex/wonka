@@ -87,6 +87,9 @@ export interface NexusGenObjects {
   }
   Mutation: {};
   Query: {};
+  UpdateNftResult: { // root type
+    message: string; // String!
+  }
 }
 
 export interface NexusGenInterfaces {
@@ -117,9 +120,13 @@ export interface NexusGenFieldTypes {
     authenticatedMutation: NexusGenRootTypes['EncryptedMessageResult'] | null; // EncryptedMessageResult
     candyMachineUpload: NexusGenRootTypes['CandyMachineUploadResult'] | null; // CandyMachineUploadResult
     mintNft: NexusGenRootTypes['MintNftResult'] | null; // MintNftResult
+    updateNft: NexusGenRootTypes['UpdateNftResult'] | null; // UpdateNftResult
   }
   Query: { // field return type
     candyMachineUploadLogs: NexusGenRootTypes['CandyMachineUploadLogsResult'] | null; // CandyMachineUploadLogsResult
+  }
+  UpdateNftResult: { // field return type
+    message: string; // String!
   }
 }
 
@@ -141,9 +148,13 @@ export interface NexusGenFieldTypeNames {
     authenticatedMutation: 'EncryptedMessageResult'
     candyMachineUpload: 'CandyMachineUploadResult'
     mintNft: 'MintNftResult'
+    updateNft: 'UpdateNftResult'
   }
   Query: { // field return type name
     candyMachineUploadLogs: 'CandyMachineUploadLogsResult'
+  }
+  UpdateNftResult: { // field return type name
+    message: 'String'
   }
 }
 
@@ -168,6 +179,13 @@ export interface NexusGenArgTypes {
       mintToAddress?: string | null; // String
       nftMetadata?: NexusGenInputs['NftMetadata'] | null; // NftMetadata
       nftMetadataJSON?: NexusGenScalars['File'] | null; // File
+    }
+    updateNft: { // args
+      cluster: string; // String!
+      newUri?: string | null; // String
+      nftMintId: string; // String!
+      payer: string; // String!
+      updateAuthority: string; // String!
     }
   }
   Query: {

@@ -78,6 +78,22 @@ type Mutation {
     setCollectionMint: Boolean!
   ): CandyMachineUploadResult
   mintNft(encryptedMessage: EncryptedMessage!, mintToAddress: String, nftMetadata: NftMetadata, nftMetadataJSON: File): MintNftResult
+  updateNft(
+    """solana cluster name (i.e. devnet, mainnet-beta, testnet)"""
+    cluster: String!
+
+    """The nft will be updated with this metadata url"""
+    newUri: String
+
+    """mint key for the NFT to update (base58 encoded string)"""
+    nftMintId: String!
+
+    """payer secret key, (base58 encoded string)"""
+    payer: String!
+
+    """update authority secret key, (base58 encoded string)"""
+    updateAuthority: String!
+  ): UpdateNftResult
 }
 
 input NftAttribute {
@@ -140,4 +156,10 @@ type Query {
     """Process id handle"""
     processId: String!
   ): CandyMachineUploadLogsResult
+}
+
+"""The result for updating an NFT"""
+type UpdateNftResult {
+  """// TODO: what should I return"""
+  message: String!
 }
