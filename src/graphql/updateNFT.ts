@@ -125,7 +125,7 @@ export const UpdateNft = mutationField('updateNft', {
         };
 
         metaplex.use(bundlrStorage(opts));
-        logger.info('Uploading new metadata json');
+        logger.info('uploading new metadata json');
         const newMetadata = args.newMetadataJson;
         const { uri: myNewUri } = await metaplex
           .nfts()
@@ -138,6 +138,13 @@ export const UpdateNft = mutationField('updateNft', {
         uri: newUri,
         updateAuthority: updateAuthorityKeypair,
       });
+
+      logger.info(
+        'update complete for ' +
+          updatedNft.mint.toBase58() +
+          ' uri: ' +
+          updatedNft.uri,
+      );
 
       if (updatedNft.uri === newUri) {
         return success('Updated nft', newUri);
