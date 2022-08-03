@@ -58,16 +58,22 @@ const runUploadV2 = async (
   } = args;
   logger.log('info', 'Before start...');
   const collectionMint = new web3.PublicKey(collectionMintParam);
+  logger.info('Collection Mint Passed...');
   await retry(
     async (bail) => {
       try {
         logger.info('Starting...');
+        logger.info(keyPair);
         const bytes = bs58.decode(keyPair);
         const walletKeyPair = web3.Keypair.fromSecretKey(
           Uint8Array.from(bytes),
         );
+        
+        logger.info('Passed WalletKeyPair...');
 
         const anchorProgram = await loadCandyProgramV2(walletKeyPair, env, rpc);
+
+        logger.info('Passed Load Program...');
 
         const {
           storage,
@@ -97,6 +103,8 @@ const runUploadV2 = async (
           anchorProgram,
           config,
         );
+
+        logger.info('Passed Get Config...');
 
         if (storage === StorageType.ArweaveSol && env !== 'mainnet-beta') {
           logger.warn(
@@ -170,6 +178,8 @@ const runUploadV2 = async (
         const zipFilesDir = `${dirname}/${processId}/files`;
         const zipFile = `${dirname}/${processId}/files.zip`;
 
+        logger.info(zipFile);
+
         if (!dirExists) {
           logger.info('Unzipping');
           await mkdirp(`${dirname}/${processId}`);
@@ -179,8 +189,12 @@ const runUploadV2 = async (
           logger.info('Directory already exists');
         }
 
+        logger.info(zipFilesDir);
+
         let files = await fs.readdir(zipFilesDir);
         files = files.map((file) => path.join(zipFilesDir, file));
+
+        logger.info('Passed readdir');
 
         const supportedImageTypes = {
           'image/png': 1,
@@ -254,6 +268,8 @@ const runUploadV2 = async (
           anchorProgram.provider.connection,
           walletKeyPair,
         );
+
+        logger.info('Passed Parse Mint Pubkey...');
 
         logger.info('About to start uploadV2');
         await uploadV2(logger, {

@@ -36,12 +36,11 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 exports.__esModule = true;
-exports.unzip = void 0;
 var path_1 = require("path");
 var yauzl_1 = require("yauzl");
 var mkdirp_1 = require("mkdirp");
 var fs_1 = require("fs");
-var unzip = function (zipPath, unzipToDir) {
+exports.unzip = function (zipPath, unzipToDir) {
     return new Promise(function (resolve, reject) { return __awaiter(void 0, void 0, void 0, function () {
         var e_1;
         return __generator(this, function (_a) {
@@ -49,7 +48,7 @@ var unzip = function (zipPath, unzipToDir) {
                 case 0:
                     _a.trys.push([0, 2, , 3]);
                     // Create folder if not exists
-                    return [4 /*yield*/, (0, mkdirp_1["default"])(unzipToDir)];
+                    return [4 /*yield*/, mkdirp_1["default"](unzipToDir)];
                 case 1:
                     // Create folder if not exists
                     _a.sent();
@@ -112,4 +111,3 @@ var unzip = function (zipPath, unzipToDir) {
         });
     }); });
 };
-exports.unzip = unzip;

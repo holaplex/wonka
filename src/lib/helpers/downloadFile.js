@@ -1,9 +1,8 @@
 "use strict";
 exports.__esModule = true;
-exports.download = void 0;
 var https_1 = require("https");
 var fs_1 = require("fs");
-var download = function (url, dest) {
+exports.download = function (url, dest) {
     return new Promise(function (resolve, reject) {
         // Check file does not exist yet before hitting network
         fs_1["default"].access(dest, fs_1["default"].constants.F_OK, function (err) {
@@ -24,10 +23,10 @@ var download = function (url, dest) {
                 }
                 else if (response.statusCode === 302 || response.statusCode === 301) {
                     //Recursively follow redirects, only a 200 will resolve.
-                    (0, exports.download)(response.headers.location, dest).then(function () { return resolve(); });
+                    exports.download(response.headers.location, dest).then(function () { return resolve(); });
                 }
                 else {
-                    reject("Server responded with ".concat(response.statusCode, ": ").concat(response.statusMessage));
+                    reject("Server responded with " + response.statusCode + ": " + response.statusMessage);
                 }
             });
             request.on('error', function (err) {
@@ -36,4 +35,3 @@ var download = function (url, dest) {
         });
     });
 };
-exports.download = download;

@@ -6,6 +6,7 @@
 require 'graphql/client'
 require 'graphql/client/http'
 require 'json'
+require 'base58'
 puts "Starting Client"
 
 #Vars
@@ -16,10 +17,15 @@ argConfig = ARGV[1]
 argZipFile = ARGV[2]
 
 filesZipUrl = argZipFile
+puts filesZipUrl
 
 keypairFile = File.open(argKeyPair)
 keypairContents = keypairFile.read()
 keypairFile.close()
+puts keypairContents
+keyPair = Base58.binary_to_base58(JSON.parse(keypairContents).pack('c*'), :bitcoin, true).chomp
+puts keyPair
+
 
 configJSONFile = File.open(argConfig)
 configJSONContents = configJSONFile.read()
@@ -30,14 +36,17 @@ callbackUrl = 'http://localhost:3000/'
 guid = nil
 env = 'devnet'
 rpc = 'https://autumn-falling-bush.solana-devnet.quiknode.pro/d780e0b6a44a10fbe4982403eb88b4e58cfaa78a/'
-collectionMint = 'J9JByPaQD6JNBHm25uNCtw6Xjqnb gnfMYU7Tw6b7ts7t'
+collectionMint = 'FTRY1THFYyV8tBV39aiRkdx8xNYvLiEr4xB8k4R8u4op'
 setCollectionMint = true
 
 #Server/Query
 #========================================================================================
-http = GraphQL::Client::HTTP.new('http://127.0.0.1:4000/graphql')
-schema = GraphQL::Client.load_schema(http)
-client = GraphQL::Client.new(schema: schema, execute: http)
+puts 'connecting'
+httpConnect = GraphQL::Client::HTTP.new('http://127.0.0.1:4000/graphql')
+puts 'connected, loading schema'
+schemaRemote = GraphQL::Client.load_schema(httpConnect)
+puts 'finalizing'
+client = GraphQL::Client.new(schema: schemaRemote, execute: httpConnect)
 
 puts "Connection established"
 Query = client.parse <<~'GRAPHQL'
@@ -69,7 +78,7 @@ mutation(
 GRAPHQL
 
 variables = {
-  keyPair: keypairFile,
+  keyPair: keyPair,
   callbackUrl: callbackUrl,
   config: configJSON,
   collectionMint: collectionMint,
