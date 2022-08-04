@@ -23,7 +23,7 @@ import { Connection, clusterApiUrl, Keypair, PublicKey } from '@solana/web3.js';
 export const MintNftResult = objectType({
   name: 'MintNftResult',
   description: 'The result for minting a NFT',
-  definition (t) {
+  definition(t) {
     t.nonNull.string('message', {
       description: 'Mint hash of newly minted NFT',
     });
@@ -39,7 +39,7 @@ export const FileScalar = scalarType({
 
 export const NftAttribute = extendInputType({
   type: 'NftAttribute',
-  definition (t) {
+  definition(t) {
     t.field('trait_type', {
       type: 'String',
       description: 'Name of the attribute',
@@ -53,7 +53,7 @@ export const NftAttribute = extendInputType({
 
 export const NftFile = extendInputType({
   type: 'NftFile',
-  definition (t) {
+  definition(t) {
     t.field('uri', {
       type: 'String',
       description: 'URI of the file',
@@ -71,7 +71,7 @@ export const NftFile = extendInputType({
 
 export const NftProperties = extendInputType({
   type: 'NftProperties',
-  definition (t) {
+  definition(t) {
     t.field('category', {
       type: 'String',
       description: 'Category of the NFT',
@@ -80,13 +80,31 @@ export const NftProperties = extendInputType({
       type: 'NftFile',
       description: 'Files associated with the NFT',
     });
+    t.list.field('creators', {
+      type: 'NftCreator',
+      description: 'list of creators for this nft',
+    });
+  },
+});
+
+export const NftCreator = extendInputType({
+  type: 'NftCreator',
+  definition(t) {
+    t.field('address', {
+      type: 'String',
+      description: 'creator address (pubkey base58)',
+    });
+    t.field('share', {
+      type: 'Int',
+      description: 'creator share in basis points',
+    });
   },
 });
 
 export const NftMetadata = inputObjectType({
   name: 'NftMetadata',
   description: 'Metadata for a NFT',
-  definition (t) {
+  definition(t) {
     t.nonNull.string('name', {
       description: 'Name of the NFT',
     });
@@ -99,7 +117,7 @@ export const NftMetadata = inputObjectType({
     t.nonNull.string('image', {
       description: 'Image of the NFT',
     });
-    t.nonNull.string('animation_url', {
+    t.string('animation_url', {
       description: 'Animation URL of the NFT',
     });
     t.nonNull.string('external_url', {
@@ -112,6 +130,10 @@ export const NftMetadata = inputObjectType({
     t.field('properties', {
       type: 'NftProperties',
       description: 'Properties of the NFT',
+    });
+    t.field('seller_fee_basis_points', {
+      type: 'Int',
+      description: 'Seller fee basis points',
     });
   },
 });
@@ -132,9 +154,9 @@ export const MintNft = mutationField('mintNft', {
     }),
     mintToAddress: arg({
       type: 'String',
-    })
+    }),
   },
-  async resolve (_, args, ctx: YogaInitialContext) {
+  async resolve(_, args, ctx: YogaInitialContext) {
     const connection = new Connection(clusterApiUrl('mainnet-beta'));
     let uri: UploadMetadataOutput = null!;
     let nft: {
@@ -145,7 +167,7 @@ export const MintNft = mutationField('mintNft', {
     let mintToPubkey: PublicKey = null;
     try {
       if (args.mintToAddress) {
-        mintToPubkey = new PublicKey(args.mintToAddress!)
+        mintToPubkey = new PublicKey(args.mintToAddress!);
       }
     } catch (e) {
       return {
@@ -196,9 +218,9 @@ export const MintNft = mutationField('mintNft', {
 
     if (mintToPubkey) {
       // if mintTo arg is provided, we want the NFT owner to be that address instead of being owned by the mint.
-      create_input_data.owner = mintToPubkey
+      create_input_data.owner = mintToPubkey;
     }
-    
+
     // Create New NFT with the metadata
     try {
       nft = await metaplex.nfts().create(create_input_data);

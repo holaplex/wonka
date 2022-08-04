@@ -78,6 +78,25 @@ type Mutation {
     setCollectionMint: Boolean!
   ): CandyMachineUploadResult
   mintNft(encryptedMessage: EncryptedMessage!, mintToAddress: String, nftMetadata: NftMetadata, nftMetadataJSON: File): MintNftResult
+  updateNft(
+    """solana cluster name (i.e. devnet, mainnet-beta, testnet)"""
+    cluster: String!
+
+    """new NFT metadata json"""
+    newMetadataJson: NftMetadata
+
+    """The nft will be updated with this metadata url"""
+    newUri: String
+
+    """mint key for the NFT to update (base58 encoded string)"""
+    nftMintId: String!
+
+    """payer secret key, (base58 encoded string)"""
+    payer: String!
+
+    """update authority secret key, (base58 encoded string)"""
+    updateAuthority: String!
+  ): UpdateNftResult
 }
 
 input NftAttribute {
@@ -86,6 +105,14 @@ input NftAttribute {
 
   """Value of the attribute"""
   value: String
+}
+
+input NftCreator {
+  """creator address (pubkey base58)"""
+  address: String
+
+  """creator share in basis points"""
+  share: Int
 }
 
 input NftFile {
@@ -102,7 +129,7 @@ input NftFile {
 """Metadata for a NFT"""
 input NftMetadata {
   """Animation URL of the NFT"""
-  animation_url: String!
+  animation_url: String
 
   """Metadata for the NFT"""
   attributes: [NftAttribute]
@@ -122,6 +149,9 @@ input NftMetadata {
   """Properties of the NFT"""
   properties: NftProperties
 
+  """Seller fee basis points"""
+  seller_fee_basis_points: Int
+
   """Symbol of the NFT"""
   symbol: String!
 }
@@ -129,6 +159,9 @@ input NftMetadata {
 input NftProperties {
   """Category of the NFT"""
   category: String
+
+  """list of creators for this nft"""
+  creators: [NftCreator]
 
   """Files associated with the NFT"""
   files: [NftFile]
@@ -140,4 +173,19 @@ type Query {
     """Process id handle"""
     processId: String!
   ): CandyMachineUploadLogsResult
+}
+
+"""The result for updating an NFT"""
+type UpdateNftResult {
+  """a descriptive message"""
+  message: String!
+
+  """uri of uploaded JSON metadata, if one was uploaded"""
+  newUri: String
+
+  """process id of the request which can be used to get logs"""
+  processId: String!
+
+  """true if nft update succeeded, false otherwise"""
+  success: Boolean!
 }

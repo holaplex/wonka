@@ -3,4 +3,4 @@ export * from './encrypted';
 export * from './candyMachine';
 
 export * from './json.scalar';
-
+export * from './updateNFT';

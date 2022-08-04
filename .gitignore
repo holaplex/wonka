@@ -134,3 +134,6 @@ build/
 firebaseConfig.json
 firebaseAdminConfig.json
 cache-files
+
+# NOTE(will): Do we want to ignore this?
+.vscode
