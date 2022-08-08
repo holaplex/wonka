@@ -13,6 +13,11 @@ import { Connection, clusterApiUrl, Keypair, PublicKey } from '@solana/web3.js';
 import { NATIVE_MINT } from '@solana/spl-token';
 import { Wallet } from '@project-serum/anchor';
 
+interface FanoutMember {
+  publicKey: string;
+  shares: number;
+}
+
 export const SplFanout = objectType({
   name: 'SplFanout',
   description: 'The spl fanout result',
@@ -23,8 +28,8 @@ export const SplFanout = objectType({
     t.nonNull.string('splTokenWallet', {
       description: 'SPL Token Wallet',
     });
-  }
-})
+  },
+});
 
 export const CreateFanoutResult = objectType({
   name: 'CreateFanoutResult',
@@ -42,8 +47,8 @@ export const CreateFanoutResult = objectType({
     });
     t.field('splFanout', {
       type: 'SplFanout',
-      description: "Spl Fanout Details"
-    })
+      description: 'Spl Fanout Details',
+    });
     t.field('splFanoutAddress', {
       type: 'String',
       description: 'Spl address of the fanout',
@@ -99,13 +104,18 @@ export const CreateFanout = mutationField('createFanout', {
     ),
     splTokenAddresses: arg({
       type: list('String'),
+      description:
+        'Token mint addresses for which the fanout will create token accounts to distribute from, leave empty for a native SOL only fanout.',
     }),
   },
   async resolve (_, args, ctx: YogaInitialContext) {
     let authorityWallet: Wallet = null!;
     const connection = new Connection(process.env.RPC_ENDPOINT, 'confirmed');
     let fanoutSdk: FanoutClient;
-    let splFanoutResult: {splTokenAddress: PublicKey | null, splTokenWallet: PublicKey | null }[] = [];
+    let splFanoutResult: {
+      splTokenAddress: PublicKey | null;
+      splTokenWallet: PublicKey | null;
+    }[] = [];
 
     const keyPairBytes = JSON.parse(
       decryptEncodedPayload(args.encryptedMessage),
@@ -122,9 +132,17 @@ export const CreateFanout = mutationField('createFanout', {
       };
     }
 
+    // Removes duplicates
+    const uniqueMembers = [
+      ...new Map(
+        args.members.map((item) => [item['publicKey'], item]),
+      ).values(),
+    ];
+
     // Make sure sum of shares is 100
     if (
-      args.members.reduce((partialSum, a) => partialSum + a.shares, 0) !== 100
+      uniqueMembers.reduce((partialSum, a: any) => partialSum + a.shares, 0) !==
+      100
     ) {
       return {
         message: 'Total share must be 100',
@@ -133,8 +151,8 @@ export const CreateFanout = mutationField('createFanout', {
 
     // Make sure all members are valid
     if (
-      args.members.filter((m) => new PublicKey(m.publicKey)).length !==
-      args.members.length
+      uniqueMembers.filter((m: FanoutMember) => new PublicKey(m.publicKey))
+        .length !== uniqueMembers.length
     ) {
       return {
         message: 'Invalid public key',
@@ -159,7 +177,7 @@ export const CreateFanout = mutationField('createFanout', {
       };
     }
 
-    if (args.splTokenAddresses.length > 0) {
+    if (args.splTokenAddress) {
       for (var i = 0; i < args.splTokenAddresses.length; i++) {
         try {
           const {
@@ -169,7 +187,10 @@ export const CreateFanout = mutationField('createFanout', {
             fanout: init.fanout,
             mint: new PublicKey(args.splTokenAddresses[i]),
           });
-          splFanoutResult.push({splTokenAddress: new PublicKey(args.splTokenAddresses[i]), splTokenWallet: tokenAccount})
+          splFanoutResult.push({
+            splTokenAddress: new PublicKey(args.splTokenAddresses[i]),
+            splTokenWallet: tokenAccount,
+          });
         } catch (e) {
           return {
             message: `Error initializing fanout for mint: ${e.message}`,
@@ -179,7 +200,7 @@ export const CreateFanout = mutationField('createFanout', {
     }
 
     // Add members
-    args.members.map(async (member) => {
+    uniqueMembers.map(async (member: FanoutMember) => {
       try {
         await fanoutSdk.addMemberWallet({
           fanout: init.fanout,
@@ -201,7 +222,6 @@ export const CreateFanout = mutationField('createFanout', {
         fanoutPublicKey: init.fanout.toBase58(),
         solanaWalletAddress: init.nativeAccount.toBase58(),
         splFanout: splFanoutResult,
-        
       };
     }
 
@@ -228,6 +248,8 @@ export const DisperseFanout = mutationField('disperseFanout', {
     ),
     splTokenAddresses: arg({
       type: list('String'),
+      description:
+        'Token mint addresses for which the fanout will distribute from, leave empty for a native SOL only distribution',
     }),
   },
   async resolve (_, args, ctx: YogaInitialContext) {
@@ -263,7 +285,7 @@ export const DisperseFanout = mutationField('disperseFanout', {
     fanoutSdk = new FanoutClient(connection, payerWallet);
 
     // For each SPL token provided verify it's valid and distribute funds
-    if (args.splTokenAddresses.length > 0) {
+    if (args.splTokenAddresses) {
       for (var i = 0; i < args.splTokenAddresses.length; i++) {
         try {
           new PublicKey(args.splTokenAddresses[i]);
@@ -285,7 +307,7 @@ export const DisperseFanout = mutationField('disperseFanout', {
           };
         }
       }
-    // If no SPL tokens listed, assume SOL only distribution
+      // If no SPL tokens listed, assume SOL only distribution
     } else {
       try {
         await fanoutSdk.distributeAll({
