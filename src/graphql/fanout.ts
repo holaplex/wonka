@@ -49,14 +49,6 @@ export const CreateFanoutResult = objectType({
       type: 'SplFanout',
       description: 'Spl Fanout Details',
     });
-    t.field('splFanoutAddress', {
-      type: 'String',
-      description: 'Spl address of the fanout',
-    });
-    t.field('splWalletAddress', {
-      type: 'String',
-      description: 'Spl address of the fanout',
-    });
   },
 });
 
@@ -177,7 +169,7 @@ export const CreateFanout = mutationField('createFanout', {
       };
     }
 
-    if (args.splTokenAddress) {
+    if (args.splTokenAddresses) {
       for (var i = 0; i < args.splTokenAddresses.length; i++) {
         try {
           const {
