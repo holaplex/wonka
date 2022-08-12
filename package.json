@@ -18,6 +18,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.36.0",
     "@bundlr-network/client": "^0.5.18",
+    "@glasseaters/hydra-sdk": "^0.3.2",
     "@metaplex-foundation/js-next": "^0.9.0",
     "@metaplex-foundation/mpl-token-metadata": "1.2.5",
     "@metaplex/arweave-cost": "^1.0.4",
@@ -25,6 +26,7 @@
     "@project-serum/anchor": "^0.17.0",
     "@solana/spl-token": "^0.1.8",
     "@solana/web3.js": "^1.43.2",
+    "@strata-foundation/spl-utils": "^3.10.0",
     "@supercharge/promise-pool": "2.1.0",
     "@types/cors": "^2.8.12",
     "@types/express": "^4.17.13",
