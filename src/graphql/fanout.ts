@@ -4,6 +4,7 @@ import {
   arg,
   objectType,
   extendInputType,
+  stringArg,
   list,
 } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
@@ -79,14 +80,14 @@ export const FanoutMember = extendInputType({
 export const CreateFanout = mutationField('createFanout', {
   type: 'CreateFanoutResult',
   args: {
-    encryptedMessage: nonNull(
-      arg({
-        type: 'EncryptedMessage',
+    keyPair: nonNull(
+      stringArg({
+        description: 'Wallet keypair',
       }),
     ),
     name: nonNull(
-      arg({
-        type: 'String',
+      stringArg({
+        description: 'Fanout Name',
       }),
     ),
     members: nonNull(
@@ -109,9 +110,7 @@ export const CreateFanout = mutationField('createFanout', {
       splTokenWallet: PublicKey | null;
     }[] = [];
 
-    const keyPairBytes = JSON.parse(
-      decryptEncodedPayload(args.encryptedMessage),
-    ) as number[];
+    const keyPairBytes = JSON.parse(args.keyPair) as number[];
 
     // Get create wallet from the client secrets
     try {
@@ -228,14 +227,14 @@ export const CreateFanout = mutationField('createFanout', {
 export const DisperseFanout = mutationField('disperseFanout', {
   type: 'DisperseFanoutResult',
   args: {
-    encryptedMessage: nonNull(
-      arg({
-        type: 'EncryptedMessage',
-      }),
+    keyPair: nonNull(
+      stringArg({ 
+        description: 'Payer keypair' 
+      })
     ),
     fanoutPublicKey: nonNull(
-      arg({
-        type: 'String',
+      stringArg({
+        description: 'Pubkey of Fanout to disperse',
       }),
     ),
     splTokenAddresses: arg({
@@ -250,9 +249,7 @@ export const DisperseFanout = mutationField('disperseFanout', {
     let fanoutSdk: FanoutClient;
 
     // Load up that keypair
-    const keyPairBytes = JSON.parse(
-      decryptEncodedPayload(args.encryptedMessage),
-    ) as number[];
+    const keyPairBytes = JSON.parse(args.keyPair) as number[];
 
     // Try to make the wallet
     try {
