@@ -13,6 +13,7 @@ import { FanoutClient, MembershipModel } from '@glasseaters/hydra-sdk';
 import { Connection, clusterApiUrl, Keypair, PublicKey } from '@solana/web3.js';
 import { NATIVE_MINT } from '@solana/spl-token';
 import { Wallet } from '@project-serum/anchor';
+import base58 from 'bs58';
 
 interface FanoutMember {
   publicKey: string;
@@ -110,7 +111,7 @@ export const CreateFanout = mutationField('createFanout', {
       splTokenWallet: PublicKey | null;
     }[] = [];
 
-    const keyPairBytes = JSON.parse(args.keyPair) as number[];
+    const keyPairBytes = base58.decode(args.keyPair);
 
     // Get create wallet from the client secrets
     try {
@@ -130,16 +131,6 @@ export const CreateFanout = mutationField('createFanout', {
       ).values(),
     ];
 
-    // Make sure sum of shares is 100
-    if (
-      uniqueMembers.reduce((partialSum, a: any) => partialSum + a.shares, 0) !==
-      100
-    ) {
-      return {
-        message: 'Total share must be 100',
-      };
-    }
-
     // Make sure all members are valid
     if (
       uniqueMembers.filter((m: FanoutMember) => new PublicKey(m.publicKey))
@@ -150,15 +141,18 @@ export const CreateFanout = mutationField('createFanout', {
       };
     }
 
+    const totalShares = uniqueMembers.reduce(
+      (partialSum, a: any) => partialSum + a.shares,
+      0,
+    ) as number;
     fanoutSdk = new FanoutClient(connection, authorityWallet);
-
     let init: null | {
       fanout: PublicKey;
       nativeAccount: PublicKey;
     } = null;
     try {
       init = await fanoutSdk.initializeFanout({
-        totalShares: 100,
+        totalShares,
         name: args.name,
         membershipModel: MembershipModel.Wallet, // TODO: support other membership models
       });
@@ -178,6 +172,7 @@ export const CreateFanout = mutationField('createFanout', {
             fanout: init.fanout,
             mint: new PublicKey(args.splTokenAddresses[i]),
           });
+
           splFanoutResult.push({
             splTokenAddress: new PublicKey(args.splTokenAddresses[i]),
             splTokenWallet: tokenAccount,
@@ -207,13 +202,15 @@ export const CreateFanout = mutationField('createFanout', {
     });
 
     // Return the details of the operation
-    if (args.splTokenAddresses.length > 0) {
-      return {
-        message: 'Successfully created wallet',
-        fanoutPublicKey: init.fanout.toBase58(),
-        solanaWalletAddress: init.nativeAccount.toBase58(),
-        splFanout: splFanoutResult,
-      };
+    if (args.splTokenAddresses) {
+      if (args.splTokenAddresses.length > 0) {
+        return {
+          message: 'Successfully created wallet',
+          fanoutPublicKey: init.fanout.toBase58(),
+          solanaWalletAddress: init.nativeAccount.toBase58(),
+          splFanout: splFanoutResult,
+        };
+      }
     }
 
     return {
@@ -228,9 +225,9 @@ export const DisperseFanout = mutationField('disperseFanout', {
   type: 'DisperseFanoutResult',
   args: {
     keyPair: nonNull(
-      stringArg({ 
-        description: 'Payer keypair' 
-      })
+      stringArg({
+        description: 'Payer keypair',
+      }),
     ),
     fanoutPublicKey: nonNull(
       stringArg({
@@ -249,7 +246,7 @@ export const DisperseFanout = mutationField('disperseFanout', {
     let fanoutSdk: FanoutClient;
 
     // Load up that keypair
-    const keyPairBytes = JSON.parse(args.keyPair) as number[];
+    const keyPairBytes = base58.decode(args.keyPair);
 
     // Try to make the wallet
     try {
@@ -267,7 +264,7 @@ export const DisperseFanout = mutationField('disperseFanout', {
       new PublicKey(args.fanoutPublicKey);
     } catch (e) {
       return {
-        message: `Error creating wallet from fanout address: ${e.message}`,
+        message: `Error creating pubkey from fanout address: ${e.message}`,
       };
     }
 
