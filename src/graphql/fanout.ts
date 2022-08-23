@@ -72,7 +72,7 @@ export const FanoutMember = extendInputType({
       description: 'Public key of member address',
     });
     t.nonNull.field('shares', {
-      type: 'Int',
+      type: 'Float',
       description: 'Share member should receive',
     });
   },
