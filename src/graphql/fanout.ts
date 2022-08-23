@@ -104,7 +104,7 @@ export const CreateFanout = mutationField('createFanout', {
   },
   async resolve (_, args, ctx: YogaInitialContext) {
     let authorityWallet: Wallet = null!;
-    const connection = new Connection('https://holaplex-main-9e4a.mainnet.rpcpool.com/a29b8b6c-bc0c-4c42-a440-705369384e1d', 'confirmed');
+    const connection = new Connection(process.env.RPC_ENDPOINT, 'confirmed');
     let fanoutSdk: FanoutClient;
     let splFanoutResult: {
       splTokenAddress: PublicKey;
@@ -289,7 +289,7 @@ export const DisperseFanout = mutationField('disperseFanout', {
           });
         } catch (e) {
           return {
-            message: `Error dispersing funds: ${e.message}`,
+            message: `Error dispersing funds: ${e.name} - ${e.message}`,
           };
         }
       }

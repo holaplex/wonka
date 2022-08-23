@@ -157,7 +157,7 @@ export const MintNft = mutationField('mintNft', {
     }),
   },
   async resolve(_, args, ctx: YogaInitialContext) {
-    const connection = new Connection(clusterApiUrl('mainnet-beta'));
+    const connection = new Connection(process.env.RPC_ENDPOINT);
     let uri: UploadMetadataOutput = null!;
     let nft: {
       nft: Nft;

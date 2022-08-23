@@ -97,7 +97,7 @@ export const UpdateNft = mutationField('updateNft', {
     let newUri = args.newUri;
 
     try {
-      const connection = new Connection(clusterApiUrl(args.cluster as Cluster));
+      const connection = new Connection(process.env.RPC_ENDPOINT);
       const metaplex = new Metaplex(connection);
       const payerKeypairSecret = base58.decode(args.payer);
       const payerKeypair = Keypair.fromSecretKey(payerKeypairSecret);
