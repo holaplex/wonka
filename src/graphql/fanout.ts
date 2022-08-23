@@ -48,7 +48,7 @@ export const CreateFanoutResult = objectType({
       description: 'Solana address of the fanout',
     });
     t.field('splFanout', {
-      type: 'SplFanout',
+      type: list('SplFanout'),
       description: 'Spl Fanout Details',
     });
   },
@@ -107,8 +107,8 @@ export const CreateFanout = mutationField('createFanout', {
     const connection = new Connection('https://holaplex-main-9e4a.mainnet.rpcpool.com/a29b8b6c-bc0c-4c42-a440-705369384e1d', 'confirmed');
     let fanoutSdk: FanoutClient;
     let splFanoutResult: {
-      splTokenAddress: PublicKey | null;
-      splTokenWallet: PublicKey | null;
+      splTokenAddress: PublicKey;
+      splTokenWallet: PublicKey;
     }[] = [];
 
     const keyPairBytes = base58.decode(args.keyPair);
@@ -172,7 +172,6 @@ export const CreateFanout = mutationField('createFanout', {
             fanout: init.fanout,
             mint: new PublicKey(args.splTokenAddresses[i]),
           });
-
           splFanoutResult.push({
             splTokenAddress: new PublicKey(args.splTokenAddresses[i]),
             splTokenWallet: tokenAccount,
@@ -185,7 +184,8 @@ export const CreateFanout = mutationField('createFanout', {
       }
     }
 
-    // Add members
+    // TODO
+    // should get all promises in array, then do promise.all, check for errors
     uniqueMembers.map(async (member: FanoutMember) => {
       try {
         await fanoutSdk.addMemberWallet({
