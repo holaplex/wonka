@@ -1,4 +1,4 @@
-# Wonka 🍬 🏭
+# Wonka 🍬 🏭 🥇
 
 This is your golden ticket to Solana NFs. 
 
@@ -34,5 +34,6 @@ To create a production ready build use `yarn build`. Build files can be found in
 Detailed documentation can be found at https://nextjs.org/docs/deployment#nextjs-build-api
 
 ## CLI
+
 
 
