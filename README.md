@@ -33,7 +33,11 @@ To create a production ready build use `yarn build`. Build files can be found in
 
 Detailed documentation can be found at https://nextjs.org/docs/deployment#nextjs-build-api
 
-## CLI
+## What can Wonka do for you?
+# Create Metaplex CandyMachine v2s
+# Create NFTs with the mintTo instruction
+# Update NFTs
+# Create fanout wallets!
 
 
 
