@@ -1,4 +1,6 @@
-# Candy Machine Factory 🍬 🏭
+# Wonka 🍬 🏭
+
+This is your golden ticket to Solana NFs. 
 
 Tech Stack:
 
@@ -7,7 +9,7 @@ Tech Stack:
 
 ## Getting Started
 
-Candy Machine Factory is easy to setup for local use or to be deployed on your own infrastructure. 
+Wonka is easy to setup and use or deploy to your own infrastructure.
 
 1. Clone the repo
 2. `cd` into the folder
@@ -33,4 +35,4 @@ Detailed documentation can be found at https://nextjs.org/docs/deployment#nextjs
 
 ## CLI
 
-TODO
+
