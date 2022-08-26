@@ -143,7 +143,7 @@ After you send this mutation, Wonka will begin provisioning your candy machine, 
       )
   ```
   The response includes the new JSON uri of the metadata.
-# Create fanout wallets!
+# Create fanout wallets
   Hydra is an metaplex protocol that supports distributing tokens to multiple wallets automatically. 
   This API lets you create fanout wallets and distribute funds to them without having to sign transactions in the browser.
 
