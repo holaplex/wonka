@@ -1,8 +1,28 @@
 # Wonka 🍬 🏭 🥇
+```
+A little nonsense now and then is relished by the wisest men. 
 
-This is your golden ticket to Solana NFs. 
+Willy Wonka circa. 1971
+```
 
-Tech Stack:
+Wonka is your golden ticket to Solana NFTs.
+
+What it **does not** do:
+
+- Serve as a floation device
+- Cure the blues
+- Take out the garbage
+- Fly
+
+What it __does__ do:
+- Create Metaplex CandyMachine v2s
+- Create NFTs with the mintTo instruction
+- Update NFTs
+- Create fanout wallets
+- Multi-send NFTs
+
+
+How it does it:
 
 - Typescript
 - Yoga GraphQL
