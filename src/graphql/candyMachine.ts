@@ -29,7 +29,7 @@ import { CACHE_PATH, EXTENSION_JSON } from '../../cli/helpers/constants.js';
 import mkdirp from 'mkdirp';
 import { bs58 } from '@project-serum/anchor/dist/cjs/utils/bytes/index.js';
 import retry from 'async-retry';
-import { exec } from 'child_process'
+import exec from 'await-exec'
 
 const dirname = path.resolve();
 
@@ -176,7 +176,7 @@ const runUploadV2 = async (
           await mkdirp(`${dirname}/${processId}`);
           await download(filesZipUrl, zipFile);
           // await unzip(zipFile, zipFilesDir);
-          await exec('7z e ' + zipFile)
+          await exec('7z x ' + zipFile + ' -y -o./files')
         } else {
           logger.info('Directory already exists');
         }
