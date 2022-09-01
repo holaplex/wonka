@@ -31,6 +31,7 @@ import { bs58 } from '@project-serum/anchor/dist/cjs/utils/bytes/index.js';
 import retry from 'async-retry';
 
 const dirname = path.resolve();
+const storageDir = "/app/tmp";
 
 const runUploadV2 = async (
   logger: winston.Logger,
@@ -164,15 +165,15 @@ const runUploadV2 = async (
 
         // check if dir exists
         const dirExists = await fs
-          .stat(`${dirname}/${processId}`)
+          .stat(`${storageDir}/${processId}`)
           .then(() => true)
           .catch(() => false);
-        const zipFilesDir = `${dirname}/${processId}/files`;
-        const zipFile = `${dirname}/${processId}/files.zip`;
+        const zipFilesDir = `${storageDir}/${processId}/files`;
+        const zipFile = `${storageDir}/${processId}/files.zip`;
 
         if (!dirExists) {
           logger.info('Unzipping');
-          await mkdirp(`${dirname}/${processId}`);
+          await mkdirp(`${storageDir}/${processId}`);
           await download(filesZipUrl, zipFile);
           await unzip(zipFile, zipFilesDir);
         } else {
@@ -403,7 +404,7 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
       .finally(async () => {
         logger.info('Cleaning up');
         await new Promise<void>((resolve, reject) => {
-          rimraf(`${dirname}/${processId}`, (err) => {
+          rimraf(`${storageDir}/${processId}`, (err) => {
             if (err) {
               reject(err);
             }
