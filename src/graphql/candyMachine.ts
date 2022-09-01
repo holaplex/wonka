@@ -168,7 +168,7 @@ const runUploadV2 = async (
           .stat(`${dirname}/${processId}`)
           .then(() => true)
           .catch(() => false);
-        const zipFilesDir = `${dirname}/${processId}/files`;
+        const zipFilesDir = `${dirname}/${processId}/`;
         const zipFile = `${dirname}/${processId}/files.zip`;
 
         if (!dirExists) {
