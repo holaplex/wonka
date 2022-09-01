@@ -15,17 +15,20 @@ import fs from 'fs/promises';
 import { getType } from 'mime';
 import winston from 'winston';
 import rimraf from 'rimraf';
-import { uploadV2 } from '../../cli/commands/upload-logged.js';
+import { uploadV2 } from '../../third_party/metaplex-cli/commands/upload-logged.js';
 import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
-import { loadCandyProgramV2 } from '../../cli/helpers/accounts.js';
+import { loadCandyProgramV2 } from '../../third_party/metaplex-cli/helpers/accounts.js';
 import {
   getCandyMachineV2ConfigFromPayload,
   parseCollectionMintPubkey,
-} from '../../cli/helpers/various.js';
-import { StorageType } from '../../cli/helpers/storage-type.js';
+} from '../../third_party/metaplex-cli/helpers/various.js';
+import { StorageType } from '../../third_party/metaplex-cli/helpers/storage-type.js';
 import { download } from '../lib/helpers/downloadFile.js';
 import { unzip } from '../lib/helpers/unZipFile.js';
-import { CACHE_PATH, EXTENSION_JSON } from '../../cli/helpers/constants.js';
+import {
+  CACHE_PATH,
+  EXTENSION_JSON,
+} from '../../third_party/metaplex-cli/helpers/constants.js';
 import mkdirp from 'mkdirp';
 import { bs58 } from '@project-serum/anchor/dist/cjs/utils/bytes/index.js';
 import retry from 'async-retry';
@@ -187,6 +190,7 @@ const runUploadV2 = async (
           'image/gif': 1,
           'image/jpeg': 1,
         };
+
         const supportedAnimationTypes = {
           'video/mp4': 1,
           'video/quicktime': 1,

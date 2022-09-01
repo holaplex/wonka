@@ -96,9 +96,9 @@ export type Creators_Bool_Exp = {
 
 /** unique or primary key constraints on table "creators" */
 export enum Creators_Constraint {
-  /** unique or primary key constraint */
+  /** unique or primary key constraint on columns "name" */
   CreatorsNameKey = 'creators_name_key',
-  /** unique or primary key constraint */
+  /** unique or primary key constraint on columns "id" */
   CreatorsPkey = 'creators_pkey'
 }
 
@@ -140,7 +140,7 @@ export type Creators_Mutation_Response = {
   returning: Array<Creators>;
 };
 
-/** on conflict condition type for table "creators" */
+/** on_conflict condition type for table "creators" */
 export type Creators_On_Conflict = {
   constraint: Creators_Constraint;
   update_columns?: Array<Creators_Update_Column>;
@@ -198,6 +198,12 @@ export enum Creators_Update_Column {
   UpdatedAt = 'updated_at'
 }
 
+export type Creators_Updates = {
+  /** sets the columns of the filtered rows to the given values */
+  _set?: InputMaybe<Creators_Set_Input>;
+  where: Creators_Bool_Exp;
+};
+
 /** mutation root */
 export type Mutation_Root = {
   __typename?: 'mutation_root';
@@ -213,6 +219,8 @@ export type Mutation_Root = {
   update_creators?: Maybe<Creators_Mutation_Response>;
   /** update single row of the table: "creators" */
   update_creators_by_pk?: Maybe<Creators>;
+  /** update multiples rows of table: "creators" */
+  update_creators_many?: Maybe<Array<Maybe<Creators_Mutation_Response>>>;
 };
 
 
@@ -253,6 +261,12 @@ export type Mutation_RootUpdate_CreatorsArgs = {
 export type Mutation_RootUpdate_Creators_By_PkArgs = {
   _set?: InputMaybe<Creators_Set_Input>;
   pk_columns: Creators_Pk_Columns_Input;
+};
+
+
+/** mutation root */
+export type Mutation_RootUpdate_Creators_ManyArgs = {
+  updates: Array<Creators_Updates>;
 };
 
 /** column ordering options */
