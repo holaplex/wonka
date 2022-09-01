@@ -1,19 +1,17 @@
 import { LOCALHOST } from '@metaplex-foundation/amman';
 import {
   Amman,
+  ammanMockStorage,
   AmmanMockStorageDriver,
 } from '@metaplex-foundation/amman-client';
 import { Connection } from '@solana/web3.js';
-
+import path from 'path';
+import * as fs from 'fs';
 import {
   Metaplex,
   keypairIdentity,
-  MetaplexPlugin,
-  UploadMetadataOutput,
-  Nft,
-  CreateNftOutput,
-  CreateNftInput,
-} from '@metaplex-foundation/js-next';
+  toMetaplexFile,
+} from '@metaplex-foundation/js';
 
 const createNft = async (
   connection: Connection,
@@ -38,17 +36,54 @@ const main = async () => {
   await amman.airdrop(connection, userPubkey, 2);
 
   const metaplex = new Metaplex(connection);
-  const ammanStorage = amman.createMockStorageDriver('amman-storage-driver');
   metaplex.use(keypairIdentity(collectionOwnerKeypair));
-  metaplex.use(ammanStorage as MetaplexPlugin);
+  metaplex.use(ammanMockStorage('amman-mock-storage'));
+  const storageDriver = metaplex.storage().driver();
 
-  // Can I initialize amman from config.js here? / Do I want to
-  // Test data needed to generate
-  //  - "user" wallet (funded)
-  //  - "owner" wallet (funded)
-  //  - a candy machine
-  //
-  // How can I transform this into some sort of test?
+  const collectionNftDir = path.resolve(
+    __dirname,
+    'data',
+    'example_collection_nft',
+  );
+  const collectionNftImagePath = path.resolve(collectionNftDir, '0.png');
+  const collectionNftJsonPath = path.resolve(collectionNftDir, '0.json');
+  const collectionNftImageData = fs.readFileSync(collectionNftImagePath);
+  const collectionNftMetadataData = fs.readFileSync(collectionNftJsonPath);
+
+  const collectionNftImageMetaplexFile = toMetaplexFile(
+    collectionNftImageData,
+    'collection-nft.png',
+  );
+  const collectionNftMetadataMetaplexFile = toMetaplexFile(
+    collectionNftMetadataData,
+    'collection-nft.json',
+  );
+
+  const [collectionNftImageUri, collectionNftMetadataUri] =
+    await storageDriver.uploadAll([
+      collectionNftImageMetaplexFile,
+      collectionNftMetadataMetaplexFile,
+    ]);
+
+  console.log('Upload Results:');
+  console.log('nftImageUri:', collectionNftImageUri);
+  console.log('nftMetadataUri:', collectionNftMetadataUri);
+
+  const { nft } = await metaplex
+    .nfts()
+    .create({
+      uri: collectionNftMetadataUri,
+      name: 'Example Collection NFT',
+      symbol: 'ECNFT',
+      sellerFeeBasisPoints: 0,
+      updateAuthority: collectionOwnerKeypair,
+    })
+    .run();
+
+  console.log('created NFT');
+  console.log('nft mint address:', nft.mint.address.toBase58());
+  console.log('nft metadata addresss: ', nft.metadataAddress.toBase58());
+  console.log(nft);
 
   console.log('localnet is up');
 };
