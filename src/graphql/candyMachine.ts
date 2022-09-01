@@ -177,7 +177,7 @@ const runUploadV2 = async (
           await mkdirp(`${storageDir}/${processId}/files`);
           await download(filesZipUrl, zipFile);
           // await unzip(zipFile, zipFilesDir);
-          await exec('/usr/bin/7z x ' + zipFile + ` -y -o${storageDir}/${processId}/files`)
+          await exec('/usr/bin/7z x ' + zipFile + ` -y -o${zipFilesDir}`)
         } else {
           logger.info('Directory already exists');
         }
