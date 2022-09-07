@@ -1,0 +1,23 @@
+{
+  "name": "Super Cool NFT",
+  "symbol": "SCC",
+  "description": "This NFT is super cool",
+  "seller_fee_basis_points": 0,
+  "image": "0.png",
+  "animation_url": "0.mp4",
+  "attributes": {
+    "trait_type": "coolness",
+    "value": 5
+  },
+  "external_url": "campus.io",
+  "properties": {
+    "category": "video",
+    "files": [
+      { "uri": "0.png", "type": "image/png" },
+      { "uri": "0.mp4", "type": "video/mp4" }
+    ],
+    "creators": [
+      { "address": "campEwCXkqfySan6a7R71BTBSurfLsfqHgShC11J3Bj", "share": 100 }
+    ]
+  }
+}

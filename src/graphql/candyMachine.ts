@@ -16,7 +16,10 @@ import { getType } from 'mime';
 import winston from 'winston';
 import rimraf from 'rimraf';
 import { uploadV2 } from '../../third_party/metaplex-cli/commands/upload-logged';
-import { loadCandyProgramV2 } from '../../third_party/metaplex-cli/helpers/accounts';
+import {
+  createCandyMachineV2,
+  loadCandyProgramV2,
+} from '../../third_party/metaplex-cli/helpers/accounts';
 import {
   getCandyMachineV2ConfigFromPayload,
   parseCollectionMintPubkey,
@@ -31,9 +34,155 @@ import {
 import mkdirp from 'mkdirp';
 import { bs58 } from '@project-serum/anchor/dist/cjs/utils/bytes/index.js';
 import retry from 'async-retry';
-import { Metaplex } from '@metaplex-foundation/js-next';
+import {
+  keypairIdentity,
+  Metaplex,
+  MetaplexFile,
+  toMetaplexFile,
+} from '@metaplex-foundation/js';
+import { nftStorageUploadGenerator } from '../../third_party/metaplex-cli/helpers/upload/nft-storage';
+import { NFTStorage } from 'nft.storage';
+import { Connection, Keypair } from '@solana/web3.js';
+import {
+  ammanMockStorage,
+  AmmanMockStorageDriver,
+} from '@metaplex-foundation/amman-client';
+import { CreateCandyMachineInput } from '@metaplex-foundation/js-next';
 
 const dirname = path.resolve();
+
+const LOCALHOST = 'http://127.0.0.1:8899';
+
+const runUploadV2UsingHiddenSettings = async (
+  logger: winston.Logger,
+  processId: string,
+  args: {
+    collectionMint: string;
+    config: any;
+    callbackUrl: null | string;
+    guid?: string;
+    keyPair: string;
+    env: string;
+    filesZipUrl: string;
+    rpc: string;
+    setCollectionMint: boolean;
+  },
+) => {
+  const {
+    collectionMint: collectionMintParam,
+    setCollectionMint,
+    filesZipUrl,
+    config,
+    rpc,
+    env,
+    keyPair,
+  } = args;
+
+  logger.info('Uploading Candy Machine with hidden settings');
+
+  const bytes = bs58.decode(keyPair);
+  const walletKeyPair = web3.Keypair.fromSecretKey(Uint8Array.from(bytes));
+
+  const collectionMint = new web3.PublicKey(collectionMintParam);
+
+  // Unpack zip file
+  const processDir = `${dirname}/${processId}`;
+  const zipFilesDir = `${dirname}/${processId}/files`;
+  const zipFile = `${dirname}/${processId}/files.zip`;
+  const dirExists = await fs
+    .stat(processDir)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!dirExists) {
+    await mkdirp(`${dirname}/${processId}`);
+    await download(filesZipUrl, zipFile);
+    await unzip(zipFile, zipFilesDir);
+  } else {
+    logger.info('Already Downloaded zip files (presumably)');
+  }
+
+  console.log('got config: ', config);
+
+  const filesInTheDir = await fs.readdir(zipFilesDir);
+  console.log('files = ', filesInTheDir);
+
+  if (config['storage'] !== 'nft-storage' || !config['nftStorageKey']) {
+    const message =
+      'hidden settings currently only works with nft storage and requires an nftStorageKey';
+    logger.error(message);
+    throw Error(message);
+  }
+
+  const connection = new Connection(LOCALHOST);
+  const metaplex = new Metaplex(connection);
+  metaplex.use(keypairIdentity(walletKeyPair));
+  metaplex.use(ammanMockStorage('amman-mock-storage'));
+  const storageDriver = metaplex.storage();
+
+  // We need to first upload the files for the NFT
+  // then replace the
+
+  const templateNftPath = path.join(zipFilesDir, '0.json');
+  const templateNftMetadataStr = await fs.readFile(templateNftPath, 'utf-8');
+  let templateNftMetadata = JSON.parse(templateNftMetadataStr);
+  console.log(templateNftMetadata);
+
+  // files look like:
+  // { uri: "0.png", type: "image/png" },
+  // { uri: "0.mp4", type: "video/mp4" },
+  const files = templateNftMetadata['properties']['files'];
+
+  for (let nftFile of files) {
+    // TODO(will): upload with nft-storage
+    // if env === "localnet"
+    const fileName = nftFile['uri'];
+    const filePath = path.join(zipFilesDir, fileName);
+    const fileBytes = await fs.readFile(filePath);
+    const metaplexFile = toMetaplexFile(fileBytes, fileName);
+    const uploadedFileUri = await storageDriver.upload(metaplexFile);
+    console.log('uploaded file: ', uploadedFileUri);
+    nftFile['uri'] = uploadedFileUri;
+  }
+
+  console.log('Fixed Metadata: ', templateNftMetadata);
+  const nftMetadataUploadedFileUri = await storageDriver.uploadJson(
+    templateNftMetadata,
+  );
+  console.log(nftMetadataUploadedFileUri);
+
+  config['hiddenSettings'] = {
+    name: 'My Nft', // TODO
+    uri: nftMetadataUploadedFileUri,
+    hash: 0,
+  };
+
+  // now the config is ready
+  await retry(
+    async (bail) => {
+      try {
+        logger.info('Creating Candy Machine with config: \n', config);
+        const { response, candyMachine } = await metaplex
+          .candyMachines()
+          .create(config)
+          .run();
+        logger.info('finished created candy machine');
+        return { processId };
+      } catch (err) {
+        logger.error('Errored out', err);
+        throw err;
+      }
+    },
+    {
+      retries: 3,
+      onRetry(e, attempt) {
+        logger.info('Retrying');
+        logger.error(e?.message ?? 'UNKNOWN_ERR');
+        logger.error(`Retrying... Attempt ${attempt}`);
+      },
+    },
+  );
+};
 
 const runUploadV2 = async (
   logger: winston.Logger,
@@ -59,6 +208,7 @@ const runUploadV2 = async (
     env,
     keyPair,
   } = args;
+
   logger.log('info', 'Before start...');
   const collectionMint = new web3.PublicKey(collectionMintParam);
   await retry(
@@ -370,6 +520,13 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         description: 'Solana env, either mainnet-beta | devnet | testnet',
       }),
     ),
+    useHiddenSettings: nonNull(
+      booleanArg({
+        default: false,
+        description:
+          'if set to true, the candy machine config will be modified to use hidden settings',
+      }),
+    ),
   },
   async resolve(_, args, _ctx: YogaInitialContext) {
     const processId = uuidv4();
@@ -399,24 +556,43 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
       await fs.mkdir(CACHE_PATH);
     }
 
-    runUploadV2(logger, processId, args)
-      .catch((err) => {
-        logger.error('Aborting due to error');
-        logger.error(err);
-      })
-      .finally(async () => {
-        logger.info('Cleaning up');
-        await new Promise<void>((resolve, reject) => {
-          rimraf(`${dirname}/${processId}`, (err) => {
-            if (err) {
-              reject(err);
-            }
-            resolve();
+    if (args.useHiddenSettings) {
+      runUploadV2UsingHiddenSettings(logger, processId, args)
+        .catch((err) => {
+          logger.error('Aborting due to error');
+          logger.error(err);
+        })
+        .finally(async () => {
+          logger.info('Cleaning up');
+          await new Promise<void>((resolve, reject) => {
+            rimraf(`${dirname}/${processId}`, (err) => {
+              if (err) {
+                reject(err);
+              }
+              resolve();
+            });
           });
         });
-      });
+    } else {
+      runUploadV2(logger, processId, args)
+        .catch((err) => {
+          logger.error('Aborting due to error');
+          logger.error(err);
+        })
+        .finally(async () => {
+          logger.info('Cleaning up');
+          await new Promise<void>((resolve, reject) => {
+            rimraf(`${dirname}/${processId}`, (err) => {
+              if (err) {
+                reject(err);
+              }
+              resolve();
+            });
+          });
+        });
 
-    return { processId };
+      return { processId };
+    }
   },
 });
 

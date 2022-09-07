@@ -11,6 +11,7 @@ import {
   Metaplex,
   keypairIdentity,
   toMetaplexFile,
+  Nft,
 } from '@metaplex-foundation/js';
 
 import { CreateFanout } from '../src/graphql';
@@ -25,6 +26,19 @@ import base58 from 'bs58';
 import { defaultYogaLogger } from '@graphql-yoga/common';
 import { Fanout, FanoutClient } from '@glasseaters/hydra-sdk';
 import { Wallet } from '@project-serum/anchor';
+
+const ensureBalance = async (
+  amman: Amman,
+  connection: Connection,
+  pubkey: PublicKey,
+  minBalance: number,
+  maxBalance: number = 2 * minBalance,
+) => {
+  const currentBalance = await connection.getBalance(pubkey, 'confirmed');
+  if (currentBalance < minBalance) {
+    amman.airdrop(connection, pubkey, maxBalance);
+  }
+};
 
 const createFanout = async (
   payer: Keypair,
@@ -111,14 +125,7 @@ const disperseFanout = async (payer: Keypair, fanoutAddress: PublicKey) => {
   console.log(result);
 };
 
-const main = async () => {
-  const server = makeServer(4000, true, console);
-  server.start();
-  const connection = new Connection(LOCALHOST);
-  const amman = Amman.instance({
-    log: console.log,
-  });
-
+const testFanout = async (amman: Amman, connection: Connection) => {
   const [fanoutOwnerPubkey, fanoutOwnerKeypair] = await amman.loadOrGenKeypair(
     'fanoutOwner',
   );
@@ -168,68 +175,168 @@ const main = async () => {
   await amman.airdrop(connection, fanoutSolWalletAddress, 1);
 
   const disperseFanoutResult = disperseFanout(fanoutOwnerKeypair, fanoutPubkey);
+};
 
-  // const [collectionOwnerPubkey, collectionOwnerKeypair] =
-  //   await amman.loadOrGenKeypair('collection_owner');
-  // const [userPubkey, userKeypair] = await amman.loadOrGenKeypair('user1');
-  // const [collectionNftPubkey, collectionNftKeypair] =
-  //   await amman.loadOrGenKeypair('test_collection');
+const createCollectionNft = async (
+  amman: Amman,
+  connection: Connection,
+): Promise<Nft> => {
+  const [collectionOwnerPubkey, collectionOwnerKeypair] =
+    await amman.loadOrGenKeypair('collection_owner');
+  const [userPubkey, userKeypair] = await amman.loadOrGenKeypair('user1');
 
-  // await amman.airdrop(connection, collectionOwnerPubkey, 100);
-  // await amman.airdrop(connection, userPubkey, 2);
+  await ensureBalance(amman, connection, collectionOwnerPubkey, 100);
+  await ensureBalance(amman, connection, userPubkey, 2);
+  const metaplex = new Metaplex(connection);
+  metaplex.use(keypairIdentity(collectionOwnerKeypair));
+  metaplex.use(ammanMockStorage('amman-mock-storage'));
+  const storageDriver = metaplex.storage().driver();
+  const collectionNftDir = path.resolve(
+    __dirname,
+    'data',
+    'example_collection_nft',
+  );
+  const collectionNftImagePath = path.resolve(collectionNftDir, '0.png');
+  const collectionNftJsonPath = path.resolve(collectionNftDir, '0.json');
+  const collectionNftImageData = fs.readFileSync(collectionNftImagePath);
+  const collectionNftMetadataData = fs.readFileSync(collectionNftJsonPath);
+  const collectionNftImageMetaplexFile = toMetaplexFile(
+    collectionNftImageData,
+    'collection-nft.png',
+  );
+  const collectionNftMetadataMetaplexFile = toMetaplexFile(
+    collectionNftMetadataData,
+    'collection-nft.json',
+  );
+  const [collectionNftImageUri, collectionNftMetadataUri] =
+    await storageDriver.uploadAll([
+      collectionNftImageMetaplexFile,
+      collectionNftMetadataMetaplexFile,
+    ]);
+  console.log('Upload Results:');
+  console.log('nftImageUri:', collectionNftImageUri);
+  console.log('nftMetadataUri:', collectionNftMetadataUri);
+  const { nft } = await metaplex
+    .nfts()
+    .create({
+      uri: collectionNftMetadataUri,
+      name: 'Super Cool Collection',
+      symbol: 'SCC',
+      sellerFeeBasisPoints: 0,
+      updateAuthority: collectionOwnerKeypair,
+    })
+    .run();
 
-  // const metaplex = new Metaplex(connection);
-  // metaplex.use(keypairIdentity(collectionOwnerKeypair));
-  // metaplex.use(ammanMockStorage('amman-mock-storage'));
-  // const storageDriver = metaplex.storage().driver();
+  const mintLabelResult = await amman.addr.addLabel(
+    'super-cool-collection-mint',
+    nft.mint.address,
+  );
 
-  // const collectionNftDir = path.resolve(
-  //   __dirname,
-  //   'data',
-  //   'example_collection_nft',
-  // );
-  // const collectionNftImagePath = path.resolve(collectionNftDir, '0.png');
-  // const collectionNftJsonPath = path.resolve(collectionNftDir, '0.json');
-  // const collectionNftImageData = fs.readFileSync(collectionNftImagePath);
-  // const collectionNftMetadataData = fs.readFileSync(collectionNftJsonPath);
+  console.log('what does this print?', mintLabelResult);
+  return nft;
+};
 
-  // const collectionNftImageMetaplexFile = toMetaplexFile(
-  //   collectionNftImageData,
-  //   'collection-nft.png',
-  // );
+const uploadCandyMachine = async (amman: Amman, connection: Connection) => {
+  // prepare the zip file
+  const storage = amman.createMockStorageDriver('amman-mock-storage');
+  const zipPath = path.resolve(__dirname, 'data', 'example_drop.zip');
+  const zipBuf = fs.readFileSync(zipPath);
+  const zipMetaplexFile = toMetaplexFile(zipBuf, 'example_drop.zip');
+  const zipUri = await storage.upload(zipMetaplexFile);
 
-  // const collectionNftMetadataMetaplexFile = toMetaplexFile(
-  //   collectionNftMetadataData,
-  //   'collection-nft.json',
-  // );
+  console.log('Zip Uri: ', zipUri);
 
-  // const [collectionNftImageUri, collectionNftMetadataUri] =
-  //   await storageDriver.uploadAll([
-  //     collectionNftImageMetaplexFile,
-  //     collectionNftMetadataMetaplexFile,
-  //   ]);
+  const [payerPubkey, payerKeypair] = await amman.loadOrGenKeypair(
+    'candy-payer',
+  );
+  const [treasPubkey, treasKeypair] = await amman.loadOrGenKeypair('treasury');
+  const [collectionMint] = await amman.addr.resolveLabel(
+    'super-cool-collection-mint',
+  );
 
-  // console.log('Upload Results:');
-  // console.log('nftImageUri:', collectionNftImageUri);
-  // console.log('nftMetadataUri:', collectionNftMetadataUri);
+  console.log('collection mint: ', collectionMint);
 
-  // const { nft } = await metaplex
-  //   .nfts()
-  //   .create({
-  //     uri: collectionNftMetadataUri,
-  //     name: 'Example Collection NFT',
-  //     symbol: 'ECNFT',
-  //     sellerFeeBasisPoints: 0,
-  //     updateAuthority: collectionOwnerKeypair,
-  //   })
-  //   .run();
+  const cmConfigJson: any = {
+    price: 0.01,
+    number: 10,
+    sellerFeeBasisPoints: 0,
+    itemsAvailable: 10,
+    gatekeeper: null,
+    solTreasuryAccount: treasPubkey.toBase58(),
+    splTokenAccount: null,
+    splToken: null,
+    goLiveDate: 1654999999,
+    endSettings: null,
+    whitelistMintSettings: null,
+    hiddenSettings: null,
+    storage: 'nft-storage',
+    nftStorageKey: 'dummy',
+    ipfsInfuraProjectId: null,
+    ipfsInfuraSecret: null,
+    awsS3Bucket: null,
+    noRetainAuthority: false,
+    noMutable: false,
+  };
 
-  // console.log('created NFT');
-  // console.log('nft mint address:', nft.mint.address.toBase58());
-  // console.log('nft metadata addresss: ', nft.metadataAddress.toBase58());
-  // console.log(nft);
+  const client = new GraphQLClient('http://0.0.0.0:4000/graphql');
 
-  // console.log('localnet is up');
+  const result = await client.request(
+    gql`
+      mutation candyMachineUpload(
+        $keyPair: String!
+        $callbackUrl: String!
+        $config: JSON!
+        $collectionMint: String!
+        $setCollectionMint: Boolean!
+        $filesZipUrl: String!
+        $guid: String
+        $rpc: String!
+        $env: String!
+        $useHiddenSettings: Boolean!
+      ) {
+        candyMachineUpload(
+          keyPair: $keyPair
+          callbackUrl: $callbackUrl
+          config: $config
+          collectionMint: $collectionMint
+          setCollectionMint: $setCollectionMint
+          filesZipUrl: $filesZipUrl
+          guid: $guid
+          rpc: $rpc
+          env: $env
+          useHiddenSettings: $useHiddenSettings
+        ) {
+          processId
+        }
+      }
+    `,
+    {
+      keyPair: base58.encode(payerKeypair.secretKey),
+      callbackUrl: 'http://fakeurl.com/callback',
+      config: cmConfigJson,
+      collectionMint: collectionMint,
+      setCollectionMint: true,
+      filesZipUrl: zipUri,
+      guid: '--',
+      env: 'localnet',
+      rpc: LOCALHOST,
+      useHiddenSettings: true,
+    },
+  );
+};
+
+const main = async () => {
+  const server = makeServer(4000, true, console);
+  server.start();
+  const connection = new Connection(LOCALHOST);
+  const amman = Amman.instance({
+    log: console.log,
+  });
+
+  const nft = await createCollectionNft(amman, connection);
+  await uploadCandyMachine(amman, connection);
+
+  // await testFanout(amman, connection);
 
   // server.stop();
 };

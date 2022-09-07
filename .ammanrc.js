@@ -27,6 +27,11 @@ module.exports = {
         label: 'Token Metadata Program',
         accountId: "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s",
         executable: true
+      },
+      {
+        label: 'Candy Machine Program',
+        accountId: 'cndyAnrLdpjq1Ssp1z8xxDsB8dxe7u4HL5Nxi2K5WXZ',
+        executable: true,
       }
     ],
   },
