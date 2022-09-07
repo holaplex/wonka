@@ -178,10 +178,7 @@ const main = async () => {
   // await amman.airdrop(connection, collectionOwnerPubkey, 100);
   // await amman.airdrop(connection, userPubkey, 2);
 
-  const metaplex = new Metaplex(connection);
-
-  const cmInput = CandyMachineInput
-  metaplex.candyMachines().create()
+  // const metaplex = new Metaplex(connection);
   // metaplex.use(keypairIdentity(collectionOwnerKeypair));
   // metaplex.use(ammanMockStorage('amman-mock-storage'));
   // const storageDriver = metaplex.storage().driver();
