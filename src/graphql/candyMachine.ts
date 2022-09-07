@@ -16,10 +16,7 @@ import { getType } from 'mime';
 import winston from 'winston';
 import rimraf from 'rimraf';
 import { uploadV2 } from '../../third_party/metaplex-cli/commands/upload-logged';
-import {
-  createCandyMachineV2,
-  loadCandyProgramV2,
-} from '../../third_party/metaplex-cli/helpers/accounts';
+import { loadCandyProgramV2 } from '../../third_party/metaplex-cli/helpers/accounts';
 import {
   getCandyMachineV2ConfigFromPayload,
   parseCollectionMintPubkey,
@@ -39,15 +36,23 @@ import {
   Metaplex,
   MetaplexFile,
   toMetaplexFile,
+  Amount,
+  CandyMachinesClient,
+  CandyMachine,
+  sol,
 } from '@metaplex-foundation/js';
 import { nftStorageUploadGenerator } from '../../third_party/metaplex-cli/helpers/upload/nft-storage';
 import { NFTStorage } from 'nft.storage';
-import { Connection, Keypair } from '@solana/web3.js';
+import {
+  Connection,
+  Keypair,
+  PublicKey,
+  PublicKeyInitData,
+} from '@solana/web3.js';
 import {
   ammanMockStorage,
   AmmanMockStorageDriver,
 } from '@metaplex-foundation/amman-client';
-import { CreateCandyMachineInput } from '@metaplex-foundation/js-next';
 
 const dirname = path.resolve();
 
@@ -154,19 +159,36 @@ const runUploadV2UsingHiddenSettings = async (
   config['hiddenSettings'] = {
     name: 'My Nft', // TODO
     uri: nftMetadataUploadedFileUri,
-    hash: 0,
+    hash: new Array(32).fill(0), // all zeroes should be fine
   };
+
+  const pubkeyFields = ['solTreasuryAccount', 'collection'];
+  for (const field of pubkeyFields) {
+    if (!!config[field]) {
+      config[field] = new PublicKey(config[field]);
+    }
+  }
+
+  config['authority'] = walletKeyPair;
+  config['price'] = sol(config['price'] as number);
+  config['']
 
   // now the config is ready
   await retry(
     async (bail) => {
       try {
         logger.info('Creating Candy Machine with config: \n', config);
+        console.log(
+          'running create candy machine with final config: \n',
+          config,
+        );
         const { response, candyMachine } = await metaplex
           .candyMachines()
           .create(config)
           .run();
         logger.info('finished created candy machine');
+        console.log('created candy machine: ', candyMachine.address);
+        console.log(candyMachine);
         return { processId };
       } catch (err) {
         logger.error('Errored out', err);

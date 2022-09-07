@@ -30,7 +30,7 @@ module.exports = {
       },
       {
         label: 'Candy Machine Program',
-        accountId: 'cndyAnrLdpjq1Ssp1z8xxDsB8dxe7u4HL5Nxi2K5WXZ',
+        accountId: 'cndy3Z4yapfJBmL3ShUp5exZKqR3z33thTzeNMm2gRZ',
         executable: true,
       }
     ],

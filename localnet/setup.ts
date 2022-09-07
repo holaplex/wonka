@@ -36,7 +36,9 @@ const ensureBalance = async (
 ) => {
   const currentBalance = await connection.getBalance(pubkey, 'confirmed');
   if (currentBalance < minBalance) {
-    amman.airdrop(connection, pubkey, maxBalance);
+    const sig = await amman.airdrop(connection, pubkey, maxBalance);
+    // NOTE(will): need to finzalize otherwise tx's done immediately after will fail
+    await connection.confirmTransaction(sig.signature, 'finalized');
   }
 };
 
@@ -249,6 +251,8 @@ const uploadCandyMachine = async (amman: Amman, connection: Connection) => {
   const [payerPubkey, payerKeypair] = await amman.loadOrGenKeypair(
     'candy-payer',
   );
+
+  ensureBalance(amman, connection, payerPubkey, 100);
   const [treasPubkey, treasKeypair] = await amman.loadOrGenKeypair('treasury');
   const [collectionMint] = await amman.addr.resolveLabel(
     'super-cool-collection-mint',
@@ -258,17 +262,14 @@ const uploadCandyMachine = async (amman: Amman, connection: Connection) => {
 
   const cmConfigJson: any = {
     price: 0.01,
-    number: 10,
     sellerFeeBasisPoints: 0,
     itemsAvailable: 10,
     gatekeeper: null,
     solTreasuryAccount: treasPubkey.toBase58(),
-    splTokenAccount: null,
-    splToken: null,
+    collection: collectionMint,
     goLiveDate: 1654999999,
     endSettings: null,
     whitelistMintSettings: null,
-    hiddenSettings: null,
     storage: 'nft-storage',
     nftStorageKey: 'dummy',
     ipfsInfuraProjectId: null,
