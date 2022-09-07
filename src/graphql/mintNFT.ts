@@ -8,7 +8,7 @@ import {
   scalarType,
 } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
-import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
+import { decryptEncodedPayload } from '../lib/cryptography/utils';
 
 import {
   Metaplex,

@@ -14,8 +14,8 @@ module.exports = {
     resetLedger: true,
     detached: false,
     programs: [], // can specify local programs here
-    // Remote `accounts` are loaded from this cluster by default
-    // can be overriden
+    // remote `accounts` are loaded from this cluster by default
+    // can be overriden on a per account basis
     accountsCluster: 'https://api.metaplex.solana.com',
     accounts: [
       {
