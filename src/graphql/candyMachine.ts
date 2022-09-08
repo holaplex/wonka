@@ -15,19 +15,16 @@ import fs from 'fs/promises';
 import { getType } from 'mime';
 import winston from 'winston';
 import rimraf from 'rimraf';
-import { uploadV2 } from '../../third_party/metaplex-cli/commands/upload-logged';
-import { loadCandyProgramV2 } from '../../third_party/metaplex-cli/helpers/accounts';
+import { uploadV2 } from '../../cli/commands/upload-logged';
+import { loadCandyProgramV2 } from '../../cli/helpers/accounts';
 import {
   getCandyMachineV2ConfigFromPayload,
   parseCollectionMintPubkey,
-} from '../../third_party/metaplex-cli/helpers/various';
-import { StorageType } from '../../third_party/metaplex-cli/helpers/storage-type';
+} from '../../cli/helpers/various';
+import { StorageType } from '../../cli/helpers/storage-type';
 import { download } from '../lib/helpers/downloadFile';
 import { unzip } from '../lib/helpers/unZipFile';
-import {
-  CACHE_PATH,
-  EXTENSION_JSON,
-} from '../../third_party/metaplex-cli/helpers/constants';
+import { CACHE_PATH, EXTENSION_JSON } from '../../cli/helpers/constants';
 import mkdirp from 'mkdirp';
 import { bs58 } from '@project-serum/anchor/dist/cjs/utils/bytes/index.js';
 import retry from 'async-retry';

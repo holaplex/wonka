@@ -68,7 +68,7 @@ https://amman-explorer.metaplex.com/#/clusterStats?cluster=custom&customUrl=http
 From another terminal window run:
 
 ```
-ts-node localnet/setup.ts
+ts-node localnet/run.ts
 ```
 
 add code to `setup.ts` to test whatever you are working on
