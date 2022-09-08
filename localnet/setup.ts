@@ -192,29 +192,35 @@ const createCollectionNft = async (
   const metaplex = new Metaplex(connection);
   metaplex.use(keypairIdentity(collectionOwnerKeypair));
   metaplex.use(ammanMockStorage('amman-mock-storage'));
-  const storageDriver = metaplex.storage().driver();
+  const storage = metaplex.storage();
   const collectionNftDir = path.resolve(
     __dirname,
     'data',
     'example_collection_nft',
   );
   const collectionNftImagePath = path.resolve(collectionNftDir, '0.png');
-  const collectionNftJsonPath = path.resolve(collectionNftDir, '0.json');
   const collectionNftImageData = fs.readFileSync(collectionNftImagePath);
-  const collectionNftMetadataData = fs.readFileSync(collectionNftJsonPath);
   const collectionNftImageMetaplexFile = toMetaplexFile(
     collectionNftImageData,
     'collection-nft.png',
   );
-  const collectionNftMetadataMetaplexFile = toMetaplexFile(
-    collectionNftMetadataData,
-    'collection-nft.json',
+
+  const collectionNftImageUri = await storage.upload(
+    collectionNftImageMetaplexFile,
   );
-  const [collectionNftImageUri, collectionNftMetadataUri] =
-    await storageDriver.uploadAll([
-      collectionNftImageMetaplexFile,
-      collectionNftMetadataMetaplexFile,
-    ]);
+
+  const collectionNftJsonPath = path.resolve(collectionNftDir, '0.json');
+  const collectionNftMetadataStr = fs.readFileSync(
+    collectionNftJsonPath,
+    'utf-8',
+  );
+  let collectionNftMetadataJson = JSON.parse(collectionNftMetadataStr);
+  collectionNftMetadataJson['image'] = collectionNftImageUri;
+
+  const collectionNftMetadataUri = await storage.uploadJson(
+    collectionNftMetadataJson,
+  );
+
   console.log('Upload Results:');
   console.log('nftImageUri:', collectionNftImageUri);
   console.log('nftMetadataUri:', collectionNftMetadataUri);

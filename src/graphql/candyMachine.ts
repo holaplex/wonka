@@ -215,7 +215,9 @@ const runUploadV2UsingHiddenSettings = async (
           .candyMachines()
           .create(config)
           .run();
-        logger.info('created candy machine: ', candyMachine.address);
+        logger.info(
+          'created candy machine: ' + candyMachine.address.toBase58(),
+        );
         logger.info(candyMachine);
         return { processId };
       } catch (err) {

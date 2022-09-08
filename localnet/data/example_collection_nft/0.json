@@ -1,5 +1,6 @@
 {
   "name": "Example Collection NFT",
   "symbol": "ECNFT",
-  "description": "An Example collection NFT"
+  "description": "An Example collection NFT",
+  "image": "0.png"
 }
