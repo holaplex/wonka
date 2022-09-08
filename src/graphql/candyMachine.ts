@@ -37,7 +37,7 @@ import {
   toMetaplexFile,
   sol,
 } from '@metaplex-foundation/js';
-import { nftStorage } from '@metaplex-foundation/js-plugin-nft-storage';\
+import { nftStorage } from '@metaplex-foundation/js-plugin-nft-storage';
 import {
   Connection,
   Keypair,
@@ -53,6 +53,48 @@ import exec from 'await-exec';
 const dirname = path.resolve();
 
 const storageDir = process.env.APP_ENV === 'development' ? '/app/tmp' : 'tmp';
+
+// Downloads a zip file from zipUrl and returns the directory where zipUrl was unpacked
+const downloadZip = async (
+  zipUrl: string,
+  processId: string,
+): Promise<string> => {
+  // Unpack zip file
+  const processDir = `${storageDir}/${processId}`;
+  const zipFilesDir = `${storageDir}/${processId}/files`;
+  const zipFile = `${storageDir}/${processId}/files.zip`;
+  const dirExists = await fs
+    .stat(processDir)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!dirExists) {
+    await mkdirp(`${storageDir}/${processId}`);
+    await download(zipUrl, zipFile);
+    await unzip(zipFile, zipFilesDir);
+  } else {
+    throw Error('zip dir already exists');
+  }
+
+  return zipFilesDir;
+};
+
+const SUPPORTED_MEDIA_FILE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.mp4'];
+
+const contentTypeForFileName = (
+  fileName: string,
+  supportedFileTypes = SUPPORTED_MEDIA_FILE_EXTENSIONS,
+) => {
+  const extensionToType = {
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.mp4': "video/mp4'",
+  };
+
+  const extension = fileName.split('.')[-1];
+  return extensionToType[extension];
+};
 
 const runUploadV2UsingHiddenSettings = async (
   logger: winston.Logger,
@@ -81,40 +123,15 @@ const runUploadV2UsingHiddenSettings = async (
 
   logger.info('Uploading Candy Machine with hidden settings');
 
+  // setup connection and metaplex client
   const bytes = bs58.decode(keyPair);
   const walletKeyPair = web3.Keypair.fromSecretKey(Uint8Array.from(bytes));
-
-  const collectionMint = new web3.PublicKey(collectionMintParam);
-
-  // Unpack zip file
-  const processDir = `${storageDir}/${processId}`;
-  const zipFilesDir = `${storageDir}/${processId}/files`;
-  const zipFile = `${storageDir}/${processId}/files.zip`;
-  const dirExists = await fs
-    .stat(processDir)
-    .then(() => true)
-    .catch(() => false);
-
-  if (!dirExists) {
-    await mkdirp(`${storageDir}/${processId}`);
-    await download(filesZipUrl, zipFile);
-    await unzip(zipFile, zipFilesDir);
-  } else {
-    logger.info('Already Downloaded zip files (presumably)');
-  }
-
-  console.log('got config: ', config);
-
-  const filesInTheDir = await fs.readdir(zipFilesDir);
-  console.log('files = ', filesInTheDir);
-
   const connection = new Connection(rpc);
   const metaplex = new Metaplex(connection);
   metaplex.use(keypairIdentity(walletKeyPair));
   if (env === 'localnet') {
     metaplex.use(ammanMockStorage('amman-mock-storage'));
   } else {
-
     if (config['storage'] !== 'nft-storage' || !config['nftStorageKey']) {
       const message =
         'hidden settings currently only works with nft storage and requires an nftStorageKey';
@@ -122,20 +139,21 @@ const runUploadV2UsingHiddenSettings = async (
       throw Error(message);
     }
 
-    metaplex.use(nftStorage({
-      token: config['nftStorageKey'],
-    }));
+    metaplex.use(
+      nftStorage({
+        token: config['nftStorageKey'],
+      }),
+    );
   }
 
   const storageDriver = metaplex.storage();
 
-  // We need to first upload the files for the NFT
-  // then replace the
-
+  // First we need to upload the necessary NFT files from the zip
+  const zipFilesDir = await downloadZip(filesZipUrl, processId);
   const templateNftPath = path.join(zipFilesDir, '0.json');
   const templateNftMetadataStr = await fs.readFile(templateNftPath, 'utf-8');
   let templateNftMetadata = JSON.parse(templateNftMetadataStr);
-  console.log(templateNftMetadata);
+  logger.info(templateNftMetadata);
 
   // files look like:
   // { uri: "0.png", type: "image/png" },
@@ -143,27 +161,39 @@ const runUploadV2UsingHiddenSettings = async (
   const files = templateNftMetadata['properties']['files'];
 
   for (let nftFile of files) {
-    // TODO(will): upload with nft-storage
-    // if env === "localnet"
     const fileName = nftFile['uri'];
     const filePath = path.join(zipFilesDir, fileName);
     const fileBytes = await fs.readFile(filePath);
-    const metaplexFile = toMetaplexFile(fileBytes, fileName);
+    const contentType = contentTypeForFileName(fileName);
+    const metaplexFile = toMetaplexFile(fileBytes, fileName, {
+      contentType: contentType,
+      extension: fileName.split('.')[-1],
+    });
     const uploadedFileUri = await storageDriver.upload(metaplexFile);
-    console.log('uploaded file: ', uploadedFileUri);
+
+    // update the nft metadata with uploaded uri
     nftFile['uri'] = uploadedFileUri;
+    if (templateNftMetadata['image'] === fileName) {
+      templateNftMetadata['image'] = uploadedFileUri;
+    } else if (templateNftMetadata['animation_url'] == fileName) {
+      templateNftMetadata['animation_url'] = uploadedFileUri;
+    }
   }
 
-  console.log('Fixed Metadata: ', templateNftMetadata);
+  logger.info('Uploading NFT Metadata: \n', templateNftMetadata);
   const nftMetadataUploadedFileUri = await storageDriver.uploadJson(
     templateNftMetadata,
   );
-  console.log(nftMetadataUploadedFileUri);
+
+  logger.info(nftMetadataUploadedFileUri);
 
   config['hiddenSettings'] = {
     name: 'My Nft', // TODO
     uri: nftMetadataUploadedFileUri,
-    hash: new Array(32).fill(0), // all zeroes should be fine
+    // all zeroes should be fine since all the NFT's are the same
+    // in cases where nfts have different traits we will want to update this
+    // to be the hash of a file that specifies the mint order
+    hash: new Array(32).fill(0),
   };
 
   const pubkeyFields = ['solTreasuryAccount', 'collection'];
@@ -181,17 +211,12 @@ const runUploadV2UsingHiddenSettings = async (
     async (bail) => {
       try {
         logger.info('Creating Candy Machine with config: \n', config);
-        console.log(
-          'running create candy machine with final config: \n',
-          config,
-        );
         const { response, candyMachine } = await metaplex
           .candyMachines()
           .create(config)
           .run();
-        logger.info('finished created candy machine');
-        console.log('created candy machine: ', candyMachine.address);
-        console.log(candyMachine);
+        logger.info('created candy machine: ', candyMachine.address);
+        logger.info(candyMachine);
         return { processId };
       } catch (err) {
         logger.error('Errored out', err);
