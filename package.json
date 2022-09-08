@@ -21,6 +21,7 @@
     "@glasseaters/hydra-sdk": "^0.3.2",
     "@metaplex-foundation/js": "^0.15.0",
     "@metaplex-foundation/js-next": "^0.9.0",
+    "@metaplex-foundation/js-plugin-nft-storage": "^0.1.1",
     "@metaplex-foundation/mpl-token-metadata": "1.2.5",
     "@metaplex/arweave-cost": "^1.0.4",
     "@nftstorage/metaplex-auth": "^1.2.0",

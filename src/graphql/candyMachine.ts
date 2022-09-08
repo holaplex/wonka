@@ -34,15 +34,10 @@ import retry from 'async-retry';
 import {
   keypairIdentity,
   Metaplex,
-  MetaplexFile,
   toMetaplexFile,
-  Amount,
-  CandyMachinesClient,
-  CandyMachine,
   sol,
 } from '@metaplex-foundation/js';
-import { nftStorageUploadGenerator } from '../../third_party/metaplex-cli/helpers/upload/nft-storage';
-import { NFTStorage } from 'nft.storage';
+import { nftStorage } from '@metaplex-foundation/js-plugin-nft-storage';\
 import {
   Connection,
   Keypair,
@@ -58,8 +53,6 @@ import exec from 'await-exec';
 const dirname = path.resolve();
 
 const storageDir = process.env.APP_ENV === 'development' ? '/app/tmp' : 'tmp';
-
-const LOCALHOST = 'http://127.0.0.1:8899';
 
 const runUploadV2UsingHiddenSettings = async (
   logger: winston.Logger,
@@ -115,17 +108,25 @@ const runUploadV2UsingHiddenSettings = async (
   const filesInTheDir = await fs.readdir(zipFilesDir);
   console.log('files = ', filesInTheDir);
 
-  if (config['storage'] !== 'nft-storage' || !config['nftStorageKey']) {
-    const message =
-      'hidden settings currently only works with nft storage and requires an nftStorageKey';
-    logger.error(message);
-    throw Error(message);
-  }
-
-  const connection = new Connection(LOCALHOST);
+  const connection = new Connection(rpc);
   const metaplex = new Metaplex(connection);
   metaplex.use(keypairIdentity(walletKeyPair));
-  metaplex.use(ammanMockStorage('amman-mock-storage'));
+  if (env === 'localnet') {
+    metaplex.use(ammanMockStorage('amman-mock-storage'));
+  } else {
+
+    if (config['storage'] !== 'nft-storage' || !config['nftStorageKey']) {
+      const message =
+        'hidden settings currently only works with nft storage and requires an nftStorageKey';
+      logger.error(message);
+      throw Error(message);
+    }
+
+    metaplex.use(nftStorage({
+      token: config['nftStorageKey'],
+    }));
+  }
+
   const storageDriver = metaplex.storage();
 
   // We need to first upload the files for the NFT

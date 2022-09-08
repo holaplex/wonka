@@ -3128,6 +3128,13 @@
   dependencies:
     multiformats "^9.5.4"
 
+"@ipld/dag-pb@^2.1.17":
+  version "2.1.18"
+  resolved "https://registry.yarnpkg.com/@ipld/dag-pb/-/dag-pb-2.1.18.tgz#12d63e21580e87c75fd1a2c62e375a78e355c16f"
+  integrity sha512-ZBnf2fuX9y3KccADURG5vb9FaOeMjFkCrNysB0PtftME/4iCTjxfaLoNq/IAh5fTqUOMXvryN6Jyka4ZGuMLIg==
+  dependencies:
+    multiformats "^9.5.4"
+
 "@istanbuljs/load-nyc-config@^1.0.0":
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/@istanbuljs/load-nyc-config/-/load-nyc-config-1.1.0.tgz#fd3db1d59ecf7cf121e80650bb86712f9b55eced"
@@ -3493,7 +3500,20 @@
     mime "^3.0.0"
     tweetnacl "^1.0.3"
 
-"@metaplex-foundation/js@^0.15.0":
+"@metaplex-foundation/js-plugin-nft-storage@^0.1.1":
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/@metaplex-foundation/js-plugin-nft-storage/-/js-plugin-nft-storage-0.1.1.tgz#62218802792379f48d19f77a12eda090f83f8b9a"
+  integrity sha512-5V+K6t0qQgzV+siU6WE4ogJLnEEUhCtHrApPz/CJk0upCbVyeP9nzNittqV3HjgHINQaryFb3m9j0YmAzCVPyQ==
+  dependencies:
+    "@ipld/dag-pb" "^2.1.17"
+    "@metaplex-foundation/js" "*"
+    "@nftstorage/metaplex-auth" "^1.2.0"
+    ipfs-car "^0.7.0"
+    ipfs-unixfs "^6.0.9"
+    multiformats "^9.7.0"
+    nft.storage "^6.4.1"
+
+"@metaplex-foundation/js@*", "@metaplex-foundation/js@^0.15.0":
   version "0.15.0"
   resolved "https://registry.yarnpkg.com/@metaplex-foundation/js/-/js-0.15.0.tgz#0e0165695d101382e377e6b55972b6119db2b8fa"
   integrity sha512-i+S4Z8fb9HIC+Yyx8Kaeau7jKFv8qIOE5pLsdQx4eGkqrQyxVynRyzP6EMsitkGJ11pHUYvrcmRmTvMYYV8pfQ==
@@ -7488,6 +7508,33 @@ ipfs-car@^0.6.2:
     streaming-iterables "^6.0.0"
     uint8arrays "^3.0.0"
 
+ipfs-car@^0.7.0:
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/ipfs-car/-/ipfs-car-0.7.0.tgz#72955d2b6904e87edfa17bbe5c00c1b3fcb79bb9"
+  integrity sha512-9ser6WWZ1ZMTCGbcVkRXUzOrpQ4SIiLfzIEnk+3LQsXbV09yeZg3ijhRuEXozEIYE68Go9JmOFshamsK9iKlNQ==
+  dependencies:
+    "@ipld/car" "^3.2.3"
+    "@web-std/blob" "^3.0.1"
+    bl "^5.0.0"
+    blockstore-core "^1.0.2"
+    browser-readablestream-to-it "^1.0.2"
+    idb-keyval "^6.0.3"
+    interface-blockstore "^2.0.2"
+    ipfs-core-types "^0.8.3"
+    ipfs-core-utils "^0.12.1"
+    ipfs-unixfs-exporter "^7.0.4"
+    ipfs-unixfs-importer "^9.0.4"
+    ipfs-utils "^9.0.2"
+    it-all "^1.0.5"
+    it-last "^1.0.5"
+    it-pipe "^1.1.0"
+    meow "^9.0.0"
+    move-file "^2.1.0"
+    multiformats "^9.6.3"
+    stream-to-it "^0.2.3"
+    streaming-iterables "^6.0.0"
+    uint8arrays "^3.0.0"
+
 ipfs-core-types@^0.7.3:
   version "0.7.3"
   resolved "https://registry.yarnpkg.com/ipfs-core-types/-/ipfs-core-types-0.7.3.tgz#b7cdbeed513ee5c2810b971081ed52e1ec590f2b"
@@ -7622,6 +7669,14 @@ ipfs-unixfs@^6.0.0, ipfs-unixfs@^6.0.3, ipfs-unixfs@^6.0.5, ipfs-unixfs@^6.0.6:
   version "6.0.7"
   resolved "https://registry.yarnpkg.com/ipfs-unixfs/-/ipfs-unixfs-6.0.7.tgz#9df35c334c9fad78761419994a0c078e14a1caf4"
   integrity sha512-5mKbQgvux6n5lQ+upGWWPKcoswXahdOcyGQ2SbIIRV6eBJMzxLprzKsyb0GMsg80tHX2wnNOxBKSCiSGjb+54A==
+  dependencies:
+    err-code "^3.0.1"
+    protobufjs "^6.10.2"
+
+ipfs-unixfs@^6.0.9:
+  version "6.0.9"
+  resolved "https://registry.yarnpkg.com/ipfs-unixfs/-/ipfs-unixfs-6.0.9.tgz#f6613b8e081d83faa43ed96e016a694c615a9374"
+  integrity sha512-0DQ7p0/9dRB6XCb0mVCTli33GzIzSVx5udpJuVM47tGcD+W+Bl4LsnoLswd3ggNnNEakMv1FdoFITiEnchXDqQ==
   dependencies:
     err-code "^3.0.1"
     protobufjs "^6.10.2"
@@ -9256,6 +9311,11 @@ multiformats@^9.0.4, multiformats@^9.4.1, multiformats@^9.4.13, multiformats@^9.
   resolved "https://registry.yarnpkg.com/multiformats/-/multiformats-9.6.5.tgz#f2d894a26664b454a90abf5a8911b7e39195db80"
   integrity sha512-vMwf/FUO+qAPvl3vlSZEgEVFY/AxeZq5yg761ScF3CZsXgmTi/HGkicUiNN0CI4PW8FiY2P0OLklOcmQjdQJhw==
 
+multiformats@^9.6.4, multiformats@^9.7.0:
+  version "9.8.1"
+  resolved "https://registry.yarnpkg.com/multiformats/-/multiformats-9.8.1.tgz#0e5f2910cf0c34f55adf0602f920775f9622552a"
+  integrity sha512-Cu7NfUYtCV+WN7w59WsRRF138S+um4tTo11ScYsWbNgWyCEGOu8wID1e5eMJs91gFZ0I7afodkkdxCF8NGkqZQ==
+
 multistream@^4.1.0:
   version "4.1.0"
   resolved "https://registry.yarnpkg.com/multistream/-/multistream-4.1.0.tgz#7bf00dfd119556fbc153cff3de4c6d477909f5a8"
@@ -9374,6 +9434,25 @@ nft.storage@^5.2.5:
     multiformats "^9.6.3"
     p-retry "^4.6.1"
     streaming-iterables "^6.0.0"
+
+nft.storage@^6.4.1:
+  version "6.4.1"
+  resolved "https://registry.yarnpkg.com/nft.storage/-/nft.storage-6.4.1.tgz#262faa3ba67970cbdd48480aa048d96671c6ccb4"
+  integrity sha512-UwZ+QgDCr58X+vHN4BydqdB89M8Vaza+vkWR9RatC3rXuDfIyYE5T7oOV53tbiuhA8x5Yi56tlG3NI8wLfOO1A==
+  dependencies:
+    "@ipld/car" "^3.2.3"
+    "@ipld/dag-cbor" "^6.0.13"
+    "@web-std/blob" "^3.0.1"
+    "@web-std/fetch" "^3.0.3"
+    "@web-std/file" "^3.0.0"
+    "@web-std/form-data" "^3.0.0"
+    carbites "^1.0.6"
+    ipfs-car "^0.6.2"
+    it-pipe "^1.1.0"
+    multiformats "^9.6.4"
+    p-retry "^4.6.1"
+    streaming-iterables "^6.0.0"
+    throttled-queue "^2.1.2"
 
 no-case@^3.0.4:
   version "3.0.4"
@@ -11031,6 +11110,11 @@ throat@^6.0.1:
   version "6.0.1"
   resolved "https://registry.yarnpkg.com/throat/-/throat-6.0.1.tgz#d514fedad95740c12c2d7fc70ea863eb51ade375"
   integrity sha512-8hmiGIJMDlwjg7dlJ4yKGLK8EsYqKgPWbG3b4wjJddKNwc7N7Dpn08Df4szr/sZdMVeOstrdYSsqzX6BYbcB+w==
+
+throttled-queue@^2.1.2:
+  version "2.1.4"
+  resolved "https://registry.yarnpkg.com/throttled-queue/-/throttled-queue-2.1.4.tgz#4e2008c73ab3f72ba1bb09496c3cc9c5b745dbee"
+  integrity sha512-YGdk8sdmr4ge3g+doFj/7RLF5kLM+Mi7DEciu9PHxnMJZMeVuZeTj31g4VE7ekUffx/IdbvrtOCiz62afg0mkg==
 
 through2@~2.0.0:
   version "2.0.5"
