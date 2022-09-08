@@ -249,7 +249,7 @@ const uploadCandyMachine = async (amman: Amman, connection: Connection) => {
   console.log('Zip Uri: ', zipUri);
 
   const [payerPubkey, payerKeypair] = await amman.loadOrGenKeypair(
-    'candy-payer',
+    'collection_owner',
   );
 
   ensureBalance(amman, connection, payerPubkey, 100);
