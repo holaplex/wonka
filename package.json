@@ -12,8 +12,7 @@
     "clean": "rimraf ./build && rimraf ./generated",
     "prebuild": "yarn clean",
     "dev": "concurrently \"tsc --watch\" \"nodemon dist/index.js\"",
-    "start": "node ./build/index.js",
-    "localnet:setup": "amman start .ammanrc.cjs > /dev/null 2>&1 & sleep 3 && ts-node localnet/setup.ts"
+    "start": "node ./build/index.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.36.0",
