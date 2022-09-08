@@ -103,8 +103,7 @@ export const CreateFanout = mutationField('createFanout', {
   },
   async resolve(_, args, ctx: YogaInitialContext) {
     let authorityWallet: Wallet = null!;
-    const endpoint = 'http://localhost:8899'; // process.env.RPC_ENDPOINT,
-    const connection = new Connection(endpoint, 'confirmed');
+    const connection = new Connection(process.env.RPC_ENDPOINT, 'confirmed');
     let fanoutSdk: FanoutClient;
     let splFanoutResult: {
       splTokenAddress: PublicKey;
