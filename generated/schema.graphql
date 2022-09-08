@@ -136,7 +136,7 @@ type Mutation {
     """
     splTokenAddresses: [String]
   ): DisperseFanoutResult
-  mintNft(encryptedMessage: EncryptedMessage!, mintToAddress: String, nftMetadata: NftMetadata, nftMetadataJSON: File): MintNftResult
+  mintNft(keyPair: String!, mintToAddress: String, nftMetadata: NftMetadata, nftMetadataJSON: File): MintNftResult
   updateNft(
     """solana cluster name (i.e. devnet, mainnet-beta, testnet)"""
     cluster: String!

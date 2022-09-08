@@ -249,7 +249,7 @@ export interface NexusGenArgTypes {
       splTokenAddresses?: Array<string | null> | null; // [String]
     }
     mintNft: { // args
-      encryptedMessage: NexusGenInputs['EncryptedMessage']; // EncryptedMessage!
+      keyPair: string; // String!
       mintToAddress?: string | null; // String
       nftMetadata?: NexusGenInputs['NftMetadata'] | null; // NftMetadata
       nftMetadataJSON?: NexusGenScalars['File'] | null; // File

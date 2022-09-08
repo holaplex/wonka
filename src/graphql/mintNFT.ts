@@ -8,7 +8,8 @@ import {
   scalarType,
 } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
-import { decryptEncodedPayload } from '../lib/cryptography/utils';
+import { bs58 } from '@project-serum/anchor/dist/cjs/utils/bytes/index.js';
+import { web3 } from '@project-serum/anchor';
 
 import {
   Metaplex,
@@ -141,9 +142,9 @@ export const NftMetadata = inputObjectType({
 export const MintNft = mutationField('mintNft', {
   type: 'MintNftResult',
   args: {
-    encryptedMessage: nonNull(
+    keyPair: nonNull(
       arg({
-        type: 'EncryptedMessage',
+        type: 'String',
       }),
     ),
     nftMetadata: arg({
@@ -175,13 +176,12 @@ export const MintNft = mutationField('mintNft', {
       };
     }
 
-    const keyPairBytes = JSON.parse(
-      decryptEncodedPayload(args.encryptedMessage),
-    ) as number[];
+    const bytes = bs58.decode(args.keyPair);
+    const walletKeyPair = web3.Keypair.fromSecretKey(Uint8Array.from(bytes));
 
     // Get create wallet from the client secrets
     try {
-      wallet = Keypair.fromSecretKey(Uint8Array.from(keyPairBytes));
+      wallet = Keypair.fromSecretKey(bytes);
     } catch (e) {
       return {
         message: `Error creating wallet from client secret: ${e.message}`,

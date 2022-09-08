@@ -53,8 +53,11 @@ import {
   ammanMockStorage,
   AmmanMockStorageDriver,
 } from '@metaplex-foundation/amman-client';
+import exec from 'await-exec';
 
 const dirname = path.resolve();
+
+const storageDir = process.env.APP_ENV === 'development' ? '/app/tmp' : 'tmp';
 
 const LOCALHOST = 'http://127.0.0.1:8899';
 
@@ -91,16 +94,16 @@ const runUploadV2UsingHiddenSettings = async (
   const collectionMint = new web3.PublicKey(collectionMintParam);
 
   // Unpack zip file
-  const processDir = `${dirname}/${processId}`;
-  const zipFilesDir = `${dirname}/${processId}/files`;
-  const zipFile = `${dirname}/${processId}/files.zip`;
+  const processDir = `${storageDir}/${processId}`;
+  const zipFilesDir = `${storageDir}/${processId}/files`;
+  const zipFile = `${storageDir}/${processId}/files.zip`;
   const dirExists = await fs
     .stat(processDir)
     .then(() => true)
     .catch(() => false);
 
   if (!dirExists) {
-    await mkdirp(`${dirname}/${processId}`);
+    await mkdirp(`${storageDir}/${processId}`);
     await download(filesZipUrl, zipFile);
     await unzip(zipFile, zipFilesDir);
   } else {
@@ -171,7 +174,6 @@ const runUploadV2UsingHiddenSettings = async (
 
   config['authority'] = walletKeyPair;
   config['price'] = sol(config['price'] as number);
-  config['']
 
   // now the config is ready
   await retry(
@@ -339,17 +341,18 @@ const runUploadV2 = async (
 
         // check if dir exists
         const dirExists = await fs
-          .stat(`${dirname}/${processId}`)
+          .stat(`${storageDir}/${processId}`)
           .then(() => true)
           .catch(() => false);
-        const zipFilesDir = `${dirname}/${processId}/files`;
-        const zipFile = `${dirname}/${processId}/files.zip`;
+        const zipFilesDir = `${storageDir}/${processId}/files`;
+        const zipFile = `${storageDir}/${processId}/files.zip`;
 
         if (!dirExists) {
           logger.info('Unzipping');
-          await mkdirp(`${dirname}/${processId}`);
+          await mkdirp(`${storageDir}/${processId}/files`);
           await download(filesZipUrl, zipFile);
-          await unzip(zipFile, zipFilesDir);
+          // await unzip(zipFile, zipFilesDir);
+          await exec('/usr/bin/7z x ' + zipFile + ` -y -o${zipFilesDir}`);
         } else {
           logger.info('Directory already exists');
         }
@@ -587,7 +590,7 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         .finally(async () => {
           logger.info('Cleaning up');
           await new Promise<void>((resolve, reject) => {
-            rimraf(`${dirname}/${processId}`, (err) => {
+            rimraf(`${storageDir}/${processId}`, (err) => {
               if (err) {
                 reject(err);
               }
@@ -604,7 +607,7 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         .finally(async () => {
           logger.info('Cleaning up');
           await new Promise<void>((resolve, reject) => {
-            rimraf(`${dirname}/${processId}`, (err) => {
+            rimraf(`${storageDir}/${processId}`, (err) => {
               if (err) {
                 reject(err);
               }
@@ -612,9 +615,8 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
             });
           });
         });
-
-      return { processId };
     }
+    return { processId };
   },
 });
 
