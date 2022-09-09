@@ -48,6 +48,7 @@ import {
 import exec from 'await-exec';
 
 const dirname = path.resolve();
+const SUPPORTED_MEDIA_FILE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.mp4'];
 
 // Downloads a zip file from zipUrl and returns the directory where zipUrl was unpacked
 const downloadZip = async (
@@ -75,12 +76,15 @@ const downloadZip = async (
   return zipFilesDir;
 };
 
-const SUPPORTED_MEDIA_FILE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.mp4'];
+const keypairFromBase58String = (keypairStr: string): Keypair => {
+  const bytes = base58.decode(keypairStr);
+  return web3.Keypair.fromSecretKey(Uint8Array.from(bytes));
+};
 
 const contentTypeForFileName = (
   fileName: string,
   supportedFileTypes = SUPPORTED_MEDIA_FILE_EXTENSIONS,
-) => {
+): string => {
   const extensionToType = {
     '.png': 'image/png',
     '.jpg': 'image/jpeg',
@@ -120,8 +124,7 @@ const runUploadV2UsingHiddenSettings = async (
   logger.info('Uploading Candy Machine with hidden settings');
 
   // setup connection and metaplex client
-  const bytes = base58.decode(keyPair);
-  const walletKeyPair = web3.Keypair.fromSecretKey(Uint8Array.from(bytes));
+  const walletKeyPair = keypairFromBase58String(keyPair);
   const connection = new Connection(rpc);
   const metaplex = new Metaplex(connection);
   metaplex.use(keypairIdentity(walletKeyPair));
@@ -263,11 +266,7 @@ const runUploadV2 = async (
     async (bail) => {
       try {
         logger.info('Starting...');
-        const bytes = base58.decode(keyPair);
-        const walletKeyPair = web3.Keypair.fromSecretKey(
-          Uint8Array.from(bytes),
-        );
-
+        const walletKeyPair = keypairFromBase58String(keyPair);
         const anchorProgram = await loadCandyProgramV2(walletKeyPair, env, rpc);
 
         const {
