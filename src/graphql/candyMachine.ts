@@ -598,39 +598,35 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
       processId,
     );
 
+    const removeStorageDir = async () => {
+      logger.info('cleaning up temp storage');
+      await new Promise<void>((resolve, reject) => {
+        rimraf(processTmpStorageDir, (err) => {
+          if (err) {
+            reject(err);
+          }
+          resolve();
+        });
+      });
+    };
+
     if (args.useHiddenSettings) {
       runUploadV2UsingHiddenSettings(logger, processId, args)
         .catch((err) => {
-          logger.error('Aborting due to error');
+          logger.error('Aborting runUploadV2UsingHiddenSettings due to error');
           logger.error(err);
         })
         .finally(async () => {
-          logger.info('Cleaning up');
-          await new Promise<void>((resolve, reject) => {
-            rimraf(processTmpStorageDir, (err) => {
-              if (err) {
-                reject(err);
-              }
-              resolve();
-            });
-          });
+          removeStorageDir();
         });
     } else {
       runUploadV2(logger, processId, args)
         .catch((err) => {
-          logger.error('Aborting due to error');
+          logger.error('Aborting runUploadV2 due to error');
           logger.error(err);
         })
         .finally(async () => {
-          logger.info('Cleaning up');
-          await new Promise<void>((resolve, reject) => {
-            rimraf(processTmpStorageDir, (err) => {
-              if (err) {
-                reject(err);
-              }
-              resolve();
-            });
-          });
+          removeStorageDir();
         });
     }
     return { processId };
