@@ -107,7 +107,7 @@ Example JSON config
   "solTreasuryAccount": "$(solana address)",
   "splTokenAccount": null,
   "splToken": null,
-  "goLiveDate": "$(date "+%Y-%m-%dT%T%z" | sed "s@^.\{22\}@&:@")",
+  "goLiveDate": 1654999999, // seconds since unix epoch
   "endSettings": null,
   "whitelistMintSettings": null,
   "hiddenSettings": $HIDDEN_SETTINGS,
