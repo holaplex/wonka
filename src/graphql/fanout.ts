@@ -239,8 +239,7 @@ export const DisperseFanout = mutationField('disperseFanout', {
   },
   async resolve(_, args, ctx: YogaInitialContext) {
     let payerWallet: Wallet = null!;
-    const endpoint = 'http://localhost:8899'; // process.env.RPC_ENDPOINT,
-    const connection = new Connection(endpoint, 'confirmed');
+    const connection = new Connection(process.env.RPC_ENDPOINT, 'confirmed');
     let fanoutSdk: FanoutClient;
 
     // Load up that keypair
