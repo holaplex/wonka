@@ -49,6 +49,7 @@ import exec from 'await-exec';
 
 const dirname = path.resolve();
 const SUPPORTED_MEDIA_FILE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.mp4'];
+const NFT_METADATA_FILENAME = '0.json';
 
 // Downloads a zip file from zipUrl and returns the directory where zipUrl was unpacked
 const downloadZip = async (
@@ -128,6 +129,8 @@ const runUploadV2UsingHiddenSettings = async (
   const connection = new Connection(rpc);
   const metaplex = new Metaplex(connection);
   metaplex.use(keypairIdentity(walletKeyPair));
+
+  // NOTE(will, austin): might be preferable to find a way to inject this dependency
   if (env === 'localnet') {
     metaplex.use(ammanMockStorage('amman-mock-storage'));
   } else {
@@ -148,8 +151,9 @@ const runUploadV2UsingHiddenSettings = async (
   const storageDriver = metaplex.storage();
 
   // First we need to upload the necessary NFT files from the zip
+
   const zipFilesDir = await downloadZip(filesZipUrl, processId);
-  const templateNftPath = path.join(zipFilesDir, '0.json');
+  const templateNftPath = path.join(zipFilesDir, NFT_METADATA_FILENAME);
   const templateNftMetadataStr = await fs.readFile(templateNftPath, 'utf-8');
   let templateNftMetadata = JSON.parse(templateNftMetadataStr);
   logger.info(templateNftMetadata);
@@ -186,6 +190,9 @@ const runUploadV2UsingHiddenSettings = async (
 
   logger.info(nftMetadataUploadedFileUri);
 
+  // here we need to make a few modifications and type conversions
+  // on the config so that the metaplex sdk is happy.
+
   config['hiddenSettings'] = {
     name: 'My Nft', // TODO
     uri: nftMetadataUploadedFileUri,
@@ -205,7 +212,6 @@ const runUploadV2UsingHiddenSettings = async (
   config['authority'] = walletKeyPair;
   config['price'] = sol(config['price'] as number);
 
-  // now the config is ready
   await retry(
     async (bail) => {
       try {
