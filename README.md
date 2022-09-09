@@ -50,6 +50,14 @@ APP_ENV=development
 TMP_STORAGE_DIR=tmp
 ```
 
+You will need to have `7z` installed on your machine, this can be done via:
+
+```
+sudo apt-get install p7zip-full
+```
+
+or comparable `brew` command on mac
+
 ## Try it out.
 
 Wonka is currently live and available for your use at https://wonka.holaplex.tools
