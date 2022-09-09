@@ -299,7 +299,6 @@ export const DisperseFanout = mutationField('disperseFanout', {
           mint: NATIVE_MINT,
         });
       } catch (e) {
-        console.log(e);
         return {
           message: `Error dispersing funds: ${e.message}`,
         };
