@@ -49,27 +49,25 @@ import exec from 'await-exec';
 
 const dirname = path.resolve();
 
-// make this an env var
-const storageDir = process.env.APP_ENV === 'development' ? '/app/tmp' : 'tmp';
-
 // Downloads a zip file from zipUrl and returns the directory where zipUrl was unpacked
 const downloadZip = async (
   zipUrl: string,
   processId: string,
 ): Promise<string> => {
   // Unpack zip file
-  const processDir = `${storageDir}/${processId}`;
-  const zipFilesDir = `${storageDir}/${processId}/files`;
-  const zipFile = `${storageDir}/${processId}/files.zip`;
+  const processDir = path.resolve(process.env.TMP_STORAGE_DIR, processId);
+  const zipFilesDir = path.resolve(processDir, 'files');
+  const zipFile = path.resolve(processDir, 'files.zip');
+
   const dirExists = await fs
     .stat(processDir)
     .then(() => true)
     .catch(() => false);
 
   if (!dirExists) {
-    await mkdirp(`${storageDir}/${processId}`);
+    await mkdirp(processDir);
     await download(zipUrl, zipFile);
-    await unzip(zipFile, zipFilesDir);
+    await exec('/usr/bin/7z x ' + zipFile + ` -y -o${zipFilesDir}`);
   } else {
     throw Error('zip dir already exists');
   }
@@ -365,24 +363,7 @@ const runUploadV2 = async (
         let animationFileCount = 0;
         let jsonFileCount = 0;
 
-        // check if dir exists
-        const dirExists = await fs
-          .stat(`${storageDir}/${processId}`)
-          .then(() => true)
-          .catch(() => false);
-        const zipFilesDir = `${storageDir}/${processId}/files`;
-        const zipFile = `${storageDir}/${processId}/files.zip`;
-
-        if (!dirExists) {
-          logger.info('Unzipping');
-          await mkdirp(`${storageDir}/${processId}/files`);
-          await download(filesZipUrl, zipFile);
-          // await unzip(zipFile, zipFilesDir);
-          await exec('/usr/bin/7z x ' + zipFile + ` -y -o${zipFilesDir}`);
-        } else {
-          logger.info('Directory already exists');
-        }
-
+        const zipFilesDir = await downloadZip(filesZipUrl, processId);
         let files = await fs.readdir(zipFilesDir);
         files = files.map((file) => path.join(zipFilesDir, file));
 
@@ -607,6 +588,11 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
       await fs.mkdir(CACHE_PATH);
     }
 
+    const processTmpStorageDir = path.resolve(
+      process.env.TMP_STORAGE_DIR,
+      processId,
+    );
+
     if (args.useHiddenSettings) {
       runUploadV2UsingHiddenSettings(logger, processId, args)
         .catch((err) => {
@@ -616,7 +602,7 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         .finally(async () => {
           logger.info('Cleaning up');
           await new Promise<void>((resolve, reject) => {
-            rimraf(`${storageDir}/${processId}`, (err) => {
+            rimraf(processTmpStorageDir, (err) => {
               if (err) {
                 reject(err);
               }
@@ -633,7 +619,7 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         .finally(async () => {
           logger.info('Cleaning up');
           await new Promise<void>((resolve, reject) => {
-            rimraf(`${storageDir}/${processId}`, (err) => {
+            rimraf(processTmpStorageDir, (err) => {
               if (err) {
                 reject(err);
               }

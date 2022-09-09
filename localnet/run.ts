@@ -336,8 +336,8 @@ const uploadCandyMachine = async (amman: Amman, connection: Connection) => {
 };
 
 const main = async () => {
-  const server = makeServer(4000, true, console);
-  server.start();
+  // const server = makeServer(4000, true, console);
+  // server.start();
   const connection = new Connection(LOCALHOST);
   const amman = Amman.instance({
     log: console.log,
@@ -346,7 +346,7 @@ const main = async () => {
   const nft = await createCollectionNft(amman, connection);
   await uploadCandyMachine(amman, connection);
 
-  server.stop();
+  // server.stop();
 };
 
 main();

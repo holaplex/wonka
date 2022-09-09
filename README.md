@@ -47,6 +47,7 @@ PORT=
 SERVER_PUBLIC_KEY=
 SERVER_PRIVATE_KEY=
 APP_ENV=development
+TMP_STORAGE_DIR=tmp
 ```
 
 ## Try it out.
@@ -68,7 +69,7 @@ https://amman-explorer.metaplex.com/#/clusterStats?cluster=custom&customUrl=http
 From another terminal window run:
 
 ```
-ts-node localnet/run.ts
+ts-node -r dotenv/config localnet/run.ts
 ```
 
 add code to `setup.ts` to test whatever you are working on
