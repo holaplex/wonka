@@ -162,11 +162,13 @@ Send the following mutation for a given NFT to change its json or on-chain data.
     updateAuthority: <FULL KEYPAIR of UPDATE AUTHORITY>,
     newUri: <NEW METADATA URI>,
     payer: <FULL KEYPAIR OF PAYER>,
-    newMedataJson: <NEW JSON METADATA>,
+    newMetadataJson: <NEW JSON METADATA>,
     )
 ```
 
-The response includes the new JSON uri of the metadata.
+NOTE: this call should provide EITHER `newUri` OR `newMetadataJson`
+
+The response will include the new JSON uri of the uploaded metadataJson if `newMetadataJson` is passed.
 
 # Create fanout wallets
 
