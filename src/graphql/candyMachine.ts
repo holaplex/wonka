@@ -26,7 +26,7 @@ import { download } from '../lib/helpers/downloadFile';
 import { unzip } from '../lib/helpers/unZipFile';
 import { CACHE_PATH, EXTENSION_JSON } from '../../cli/helpers/constants';
 import mkdirp from 'mkdirp';
-import { bs58 } from '@project-serum/anchor/dist/cjs/utils/bytes/index.js';
+import base58 from 'bs58';
 import retry from 'async-retry';
 import {
   keypairIdentity,
@@ -49,6 +49,7 @@ import exec from 'await-exec';
 
 const dirname = path.resolve();
 
+// make this an env var
 const storageDir = process.env.APP_ENV === 'development' ? '/app/tmp' : 'tmp';
 
 // Downloads a zip file from zipUrl and returns the directory where zipUrl was unpacked
@@ -121,7 +122,7 @@ const runUploadV2UsingHiddenSettings = async (
   logger.info('Uploading Candy Machine with hidden settings');
 
   // setup connection and metaplex client
-  const bytes = bs58.decode(keyPair);
+  const bytes = base58.decode(keyPair);
   const walletKeyPair = web3.Keypair.fromSecretKey(Uint8Array.from(bytes));
   const connection = new Connection(rpc);
   const metaplex = new Metaplex(connection);
@@ -264,7 +265,7 @@ const runUploadV2 = async (
     async (bail) => {
       try {
         logger.info('Starting...');
-        const bytes = bs58.decode(keyPair);
+        const bytes = base58.decode(keyPair);
         const walletKeyPair = web3.Keypair.fromSecretKey(
           Uint8Array.from(bytes),
         );
