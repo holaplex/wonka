@@ -194,7 +194,7 @@ const runUploadV2UsingHiddenSettings = async (
   // on the config so that the metaplex sdk is happy.
 
   config['hiddenSettings'] = {
-    name: 'My Nft', // TODO
+    name: templateNftMetadata['name'],
     uri: nftMetadataUploadedFileUri,
     // all zeroes should be fine since all the NFT's are the same
     // in cases where nfts have different traits we will want to update this
