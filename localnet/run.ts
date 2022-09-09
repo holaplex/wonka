@@ -27,6 +27,10 @@ import { defaultYogaLogger } from '@graphql-yoga/common';
 import { Fanout, FanoutClient } from '@glasseaters/hydra-sdk';
 import { Wallet } from '@project-serum/anchor';
 
+const makeTestClient = (): GraphQLClient => {
+  return new GraphQLClient('http://0.0.0.0:4000/graphql');
+};
+
 const ensureBalance = async (
   amman: Amman,
   connection: Connection,
@@ -52,7 +56,7 @@ const createFanout = async (
   }>,
 ) => {
   console.log('creating fanout');
-  const client = new GraphQLClient('http://0.0.0.0:4000/graphql');
+  const client = makeTestClient();
   let fanoutMembers = [];
 
   for (const member of members) {
@@ -99,7 +103,7 @@ const createFanout = async (
 const disperseFanout = async (payer: Keypair, fanoutAddress: PublicKey) => {
   console.log('dispersing fanout');
   const payerSecret = base58.encode(payer.secretKey);
-  const client = new GraphQLClient('http://0.0.0.0:4000/graphql');
+  const client = makeTestClient();
   const result = await client.request(
     gql`
       mutation disperseFanout(
@@ -284,7 +288,7 @@ const uploadCandyMachine = async (amman: Amman, connection: Connection) => {
     noMutable: false,
   };
 
-  const client = new GraphQLClient('http://0.0.0.0:4000/graphql');
+  const client = makeTestClient();
 
   const result = await client.request(
     gql`
@@ -342,9 +346,7 @@ const main = async () => {
   const nft = await createCollectionNft(amman, connection);
   await uploadCandyMachine(amman, connection);
 
-  // await testFanout(amman, connection);
-
-  // server.stop();
+  server.stop();
 };
 
 main();
