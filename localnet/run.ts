@@ -240,7 +240,6 @@ const createCollectionNft = async (
     nft.mint.address,
   );
 
-  console.log('what does this print?', mintLabelResult);
   return nft;
 };
 
