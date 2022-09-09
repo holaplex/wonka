@@ -33,7 +33,7 @@ const ensureBalance = async (
   pubkey: PublicKey,
   minBalance: number,
   maxBalance: number = 2 * minBalance,
-) => {
+): Promise<void> => {
   const currentBalance = await connection.getBalance(pubkey, 'confirmed');
   if (currentBalance < minBalance) {
     const sig = await amman.airdrop(connection, pubkey, maxBalance);
