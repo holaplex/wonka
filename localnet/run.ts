@@ -247,7 +247,10 @@ const createCollectionNft = async (
   return nft;
 };
 
-const uploadCandyMachine = async (amman: Amman, connection: Connection) => {
+const uploadCandyMachine = async (
+  amman: Amman,
+  connection: Connection,
+): Promise<string | null> => {
   // prepare the zip file
   const storage = amman.createMockStorageDriver('amman-mock-storage');
   const zipPath = path.resolve(__dirname, 'data', 'example_drop.zip');
@@ -261,8 +264,10 @@ const uploadCandyMachine = async (amman: Amman, connection: Connection) => {
     'collection_owner',
   );
 
-  ensureBalance(amman, connection, payerPubkey, 100);
+  await ensureBalance(amman, connection, payerPubkey, 100);
   const [treasPubkey, treasKeypair] = await amman.loadOrGenKeypair('treasury');
+  await ensureBalance(amman, connection, treasPubkey, 1);
+
   const [collectionMint] = await amman.addr.resolveLabel(
     'super-cool-collection-mint',
   );
@@ -317,6 +322,7 @@ const uploadCandyMachine = async (amman: Amman, connection: Connection) => {
           useHiddenSettings: $useHiddenSettings
         ) {
           processId
+          candyMachineAddress
         }
       }
     `,
@@ -333,6 +339,9 @@ const uploadCandyMachine = async (amman: Amman, connection: Connection) => {
       useHiddenSettings: true,
     },
   );
+
+  console.log('result', result);
+  return result.candyMachineUpload.candyMachineAddress;
 };
 
 const main = async () => {
@@ -343,8 +352,49 @@ const main = async () => {
     log: console.log,
   });
 
+  const [richDudePubKey, richDudeKeypair] = await amman.loadOrGenKeypair(
+    'rich-dude',
+  );
+  await ensureBalance(amman, connection, richDudePubKey, 1000);
+
   const nft = await createCollectionNft(amman, connection);
-  await uploadCandyMachine(amman, connection);
+  const candyAddress = await uploadCandyMachine(amman, connection);
+
+  console.log('candyAddress: ', candyAddress);
+
+  await setTimeout(async () => {
+    console.log('checking candy machine');
+    const metaplex = new Metaplex(connection);
+    metaplex.use(keypairIdentity(richDudeKeypair));
+
+    const candyMachine = await metaplex
+      .candyMachines()
+      .findByAddress({
+        address: new PublicKey(candyAddress),
+        commitment: 'confirmed',
+      })
+      .run();
+
+    console.log(candyMachine);
+
+    console.log('minting an NFT');
+    const mintedNft = await metaplex
+      .candyMachines()
+      .mint({
+        candyMachine,
+        payer: richDudeKeypair,
+        confirmOptions: {
+          skipPreflight: true,
+          commitment: 'confirmed',
+        },
+      })
+      .run();
+
+    // TODO(will): this runs reportedly runs into a bot tax
+    // unclear why (and will fail without `skipPreflight`)
+
+    console.log(mintedNft);
+  }, 5000);
 
   server.stop();
 };

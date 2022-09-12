@@ -87,6 +87,7 @@ export interface NexusGenObjects {
     processId: string; // String!
   }
   CandyMachineUploadResult: { // root type
+    candyMachineAddress: string; // String!
     processId: string; // String!
   }
   CreateFanoutResult: { // root type
@@ -134,6 +135,7 @@ export interface NexusGenFieldTypes {
     processId: string; // String!
   }
   CandyMachineUploadResult: { // field return type
+    candyMachineAddress: string; // String!
     processId: string; // String!
   }
   CreateFanoutResult: { // field return type
@@ -180,6 +182,7 @@ export interface NexusGenFieldTypeNames {
     processId: 'String'
   }
   CandyMachineUploadResult: { // field return type name
+    candyMachineAddress: 'String'
     processId: 'String'
   }
   CreateFanoutResult: { // field return type name

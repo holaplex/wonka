@@ -12,6 +12,9 @@ type CandyMachineUploadLogsResult {
 
 """Result from calling candy machine upload"""
 type CandyMachineUploadResult {
+  """the address that will be used to create the candy machine"""
+  candyMachineAddress: String!
+
   """Process id handle"""
   processId: String!
 }

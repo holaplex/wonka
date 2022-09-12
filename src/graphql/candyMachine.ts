@@ -101,6 +101,7 @@ const runUploadV2UsingHiddenSettings = async (
   logger: winston.Logger,
   processId: string,
   args: {
+    candyMachineKeypair: Keypair;
     collectionMint: string;
     config: any;
     callbackUrl: null | string;
@@ -211,6 +212,7 @@ const runUploadV2UsingHiddenSettings = async (
 
   config['authority'] = walletKeyPair;
   config['price'] = sol(config['price'] as number);
+  config['candyMachine'] = args.candyMachineKeypair;
 
   await retry(
     async (bail) => {
@@ -507,6 +509,9 @@ export const CandyMachineUploadResult = objectType({
     t.nonNull.string('processId', {
       description: 'Process id handle',
     });
+    t.nonNull.string('candyMachineAddress', {
+      description: 'the address that will be used to create the candy machine',
+    });
   },
 });
 
@@ -610,8 +615,13 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
       });
     };
 
+    //
+    const candyMachineKeypair = Keypair.generate();
     if (args.useHiddenSettings) {
-      runUploadV2UsingHiddenSettings(logger, processId, args)
+      runUploadV2UsingHiddenSettings(logger, processId, {
+        ...args,
+        candyMachineKeypair: candyMachineKeypair,
+      })
         .catch((err) => {
           logger.error('Aborting runUploadV2UsingHiddenSettings due to error');
           logger.error(err);
@@ -629,7 +639,9 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
           removeStorageDir();
         });
     }
-    return { processId };
+
+    const candyMachineAddress = candyMachineKeypair.publicKey.toBase58();
+    return { processId, candyMachineAddress };
   },
 });
 
