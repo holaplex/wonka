@@ -33,6 +33,7 @@ import {
   Metaplex,
   toMetaplexFile,
   sol,
+  usd,
 } from '@metaplex-foundation/js';
 import { nftStorage } from '@metaplex-foundation/js-plugin-nft-storage';
 import {
@@ -152,7 +153,6 @@ const runUploadV2UsingHiddenSettings = async (
   const storageDriver = metaplex.storage();
 
   // First we need to upload the necessary NFT files from the zip
-
   const zipFilesDir = await downloadZip(filesZipUrl, processId);
   const templateNftPath = path.join(zipFilesDir, NFT_METADATA_FILENAME);
   const templateNftMetadataStr = await fs.readFile(templateNftPath, 'utf-8');
@@ -194,6 +194,8 @@ const runUploadV2UsingHiddenSettings = async (
   // here we need to make a few modifications and type conversions
   // on the config so that the metaplex sdk is happy.
 
+  // Token mint not being set
+
   config['hiddenSettings'] = {
     name: templateNftMetadata['name'],
     uri: nftMetadataUploadedFileUri,
@@ -203,7 +205,14 @@ const runUploadV2UsingHiddenSettings = async (
     hash: new Array(32).fill(0),
   };
 
-  const pubkeyFields = ['solTreasuryAccount', 'collection'];
+  // "splTokenAccount": "BvvL5QRyhszHeV5ZXt8EWGJd1xUzsFVjSohsTkH5EPSL",  # campus pubkey usdc token account
+  // "splToken": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", # USDC
+  const pubkeyFields = [
+    'solTreasuryAccount',
+    'collection',
+    'splTokenAccount',
+    'splToken',
+  ];
   for (const field of pubkeyFields) {
     if (!!config[field]) {
       config[field] = new PublicKey(config[field]);
@@ -211,9 +220,21 @@ const runUploadV2UsingHiddenSettings = async (
   }
 
   config['authority'] = walletKeyPair;
-  config['price'] = sol(config['price'] as number);
+  if (!config['solTreasuryAccount']) {
+    config['price'] = sol(config['price'] as number);
+  } else {
+    // TODO(will): support non usdc mints
+    if (config['splToken'] === 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v') {
+      config['price'] = usd(config['price'] as number);
+      config['tokenMint'] = config['splToken'];
+    } else {
+      throw Error('non usdc splToken not currently supported');
+    }
+  }
+
   config['candyMachine'] = args.candyMachineKeypair;
 
+  // TODO(will): drop unrecognized keys from config before passing to metaplex
   await retry(
     async (bail) => {
       try {
