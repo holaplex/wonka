@@ -8,7 +8,7 @@ import {
   queryField,
 } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
-import { web3 } from '@project-serum/anchor';
+import { BN, web3 } from '@project-serum/anchor';
 import { uuid as uuidv4, isUuid } from 'uuidv4';
 import path from 'path';
 import fs from 'fs/promises';
@@ -16,14 +16,13 @@ import { getType } from 'mime';
 import winston from 'winston';
 import rimraf from 'rimraf';
 import { uploadV2 } from '../../cli/commands/upload-logged';
-import { loadCandyProgramV2 } from '../../cli/helpers/accounts';
+import { getTokenMint, loadCandyProgramV2 } from '../../cli/helpers/accounts';
 import {
   getCandyMachineV2ConfigFromPayload,
   parseCollectionMintPubkey,
 } from '../../cli/helpers/various';
 import { StorageType } from '../../cli/helpers/storage-type';
 import { download } from '../lib/helpers/downloadFile';
-import { unzip } from '../lib/helpers/unZipFile';
 import { CACHE_PATH, EXTENSION_JSON } from '../../cli/helpers/constants';
 import mkdirp from 'mkdirp';
 import base58 from 'bs58';
@@ -33,20 +32,17 @@ import {
   Metaplex,
   toMetaplexFile,
   sol,
-  usd,
+  token,
+  Currency,
+  Amount,
+  SplTokenAmount,
+  formatAmount,
 } from '@metaplex-foundation/js';
 import { nftStorage } from '@metaplex-foundation/js-plugin-nft-storage';
-import {
-  Connection,
-  Keypair,
-  PublicKey,
-  PublicKeyInitData,
-} from '@solana/web3.js';
-import {
-  ammanMockStorage,
-  AmmanMockStorageDriver,
-} from '@metaplex-foundation/amman-client';
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
+import { ammanMockStorage } from '@metaplex-foundation/amman-client';
 import exec from 'await-exec';
+import { MintInfo, MintLayout } from '@solana/spl-token';
 
 const dirname = path.resolve();
 const SUPPORTED_MEDIA_FILE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.mp4'];
@@ -215,21 +211,25 @@ const runUploadV2UsingHiddenSettings = async (
   ];
   for (const field of pubkeyFields) {
     if (!!config[field]) {
+      console.log('updating ', field);
       config[field] = new PublicKey(config[field]);
     }
   }
 
   config['authority'] = walletKeyPair;
-  if (!config['solTreasuryAccount']) {
+  if (!!config['solTreasuryAccount']) {
     config['price'] = sol(config['price'] as number);
   } else {
-    // TODO(will): support non usdc mints
-    if (config['splToken'] === 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v') {
-      config['price'] = usd(config['price'] as number);
-      config['tokenMint'] = config['splToken'];
-    } else {
-      throw Error('non usdc splToken not currently supported');
-    }
+    const mintAcct = await connection.getAccountInfo(config['splToken']);
+    const mintInfo = MintLayout.decode(mintAcct.data) as MintInfo;
+    const price: SplTokenAmount = token(
+      config['price'] as number,
+      mintInfo.decimals,
+    );
+    config['tokenMint'] = config['splToken'];
+    console.log(config['splToken']);
+    console.log(config['price']);
+    console.log(formatAmount(price));
   }
 
   config['candyMachine'] = args.candyMachineKeypair;
@@ -238,6 +238,8 @@ const runUploadV2UsingHiddenSettings = async (
   await retry(
     async (bail) => {
       try {
+        console.log(config['splToken']);
+        console.log(config['price']);
         logger.info('Creating Candy Machine with config: \n', config);
         const { response, candyMachine } = await metaplex
           .candyMachines()
