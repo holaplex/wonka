@@ -12,6 +12,7 @@ import {
   keypairIdentity,
   toMetaplexFile,
   Nft,
+  token,
 } from '@metaplex-foundation/js';
 
 import { CreateFanout } from '../src/graphql';
@@ -26,6 +27,7 @@ import base58 from 'bs58';
 import { defaultYogaLogger } from '@graphql-yoga/common';
 import { Fanout, FanoutClient } from '@glasseaters/hydra-sdk';
 import { Wallet } from '@project-serum/anchor';
+import { Token } from '@solana/spl-token';
 
 const makeTestClient = (): GraphQLClient => {
   return new GraphQLClient('http://0.0.0.0:4000/graphql');
@@ -44,6 +46,65 @@ const ensureBalance = async (
     // NOTE(will): need to finzalize otherwise tx's done immediately after will fail
     await connection.confirmTransaction(sig.signature, 'finalized');
   }
+};
+
+/*
+.createTokenWithMint({
+      decimals: 0,
+      initialSupply: token(1),
+      mint: newMint,
+      mintAuthority: payer,
+      freezeAuthority: payer.publicKey,
+      owner: newOwner,
+      token: newToken,
+      payer,
+      tokenProgram,
+      associatedTokenProgram,
+      createMintAccountInstructionKey: params.createMintAccountInstructionKey,
+      initializeMintInstructionKey: params.initializeMintInstructionKey,
+      createAssociatedTokenAccountInstructionKey:
+        params.createAssociatedTokenAccountInstructionKey,
+      createTokenAccountInstructionKey: params.createTokenAccountInstructionKey,
+      initializeTokenInstructionKey: params.initializeTokenInstructionKey,
+      mintTokensInstructionKey: params.mintTokensInstructionKey,
+    });
+*/
+const createToken = async (
+  amman: Amman,
+  connection: Connection,
+  tokenLabel: string,
+  payer: Keypair,
+  owner: Keypair = payer,
+): Promise<[PublicKey, PublicKey]> => {
+  const metaplex = new Metaplex(connection);
+  const [tokenMintPubkey, tokenMintKeypair] = await amman.genLabeledKeypair(
+    tokenLabel + '-mint-keypair',
+  );
+  const [tokenMintAuthPubkey, tokenMintAuthKeypair] =
+    await amman.genLabeledKeypair(tokenLabel + '-authority-keypair');
+
+  const createMintResult = await metaplex
+    .tokens()
+    .createTokenWithMint({
+      decimals: 6,
+      initialSupply: token(1000 * Math.pow(10, 6)),
+      mint: tokenMintKeypair,
+      mintAuthority: tokenMintAuthKeypair,
+      freezeAuthority: tokenMintAuthPubkey,
+      owner: owner.publicKey,
+      payer: payer,
+      confirmOptions: {
+        commitment: 'finalized',
+      },
+    })
+    .run();
+
+  console.log('Created Mint:');
+  console.log(createMintResult);
+
+  // maybe create metadata account as well here?
+
+  return [createMintResult.token.mint.address, createMintResult.token.address];
 };
 
 const createFanout = async (
@@ -250,6 +311,9 @@ const createCollectionNft = async (
 const uploadCandyMachine = async (
   amman: Amman,
   connection: Connection,
+  splTokenMint?: PublicKey,
+  splTokenAccount?: PublicKey,
+  nativeWallet?: PublicKey,
 ): Promise<string | null> => {
   // prepare the zip file
   const storage = amman.createMockStorageDriver('amman-mock-storage');
@@ -279,7 +343,6 @@ const uploadCandyMachine = async (
     sellerFeeBasisPoints: 0,
     itemsAvailable: 10,
     gatekeeper: null,
-    solTreasuryAccount: treasPubkey.toBase58(),
     collection: collectionMint,
     goLiveDate: 1654999999,
     endSettings: null,
@@ -292,6 +355,17 @@ const uploadCandyMachine = async (
     noRetainAuthority: false,
     noMutable: false,
   };
+
+  if (!!splTokenMint && !!splTokenAccount) {
+    cmConfigJson['splToken'] = splTokenMint.toBase58();
+    cmConfigJson['splTokenAccount'] = splTokenAccount.toBase58();
+  } else if (!!nativeWallet) {
+    cmConfigJson['solTreasuryAccount'] = nativeWallet.toBase58();
+  } else {
+    throw Error(
+      'need to provide either a native wallet or an spl mint and account for treasury',
+    );
+  }
 
   const client = makeTestClient();
 
@@ -357,44 +431,68 @@ const main = async () => {
   );
   await ensureBalance(amman, connection, richDudePubKey, 1000);
 
+  const [tokenCreatorPubkey, tokenCreatorKeypair] =
+    await amman.loadOrGenKeypair('token-creator');
+
+  await ensureBalance(amman, connection, tokenCreatorPubkey, 1000);
+
+  const [tokenMintAddress, tokenAccountAddress] = await createToken(
+    amman,
+    connection,
+    'my-token',
+    tokenCreatorKeypair,
+  );
+
+  console.log(
+    'created token mint:',
+    tokenMintAddress.toBase58(),
+    'account:',
+    tokenAccountAddress.toBase58(),
+  );
+
   const nft = await createCollectionNft(amman, connection);
-  const candyAddress = await uploadCandyMachine(amman, connection);
+  const candyAddress = await uploadCandyMachine(
+    amman,
+    connection,
+    tokenMintAddress,
+    tokenAccountAddress,
+  );
 
   console.log('candyAddress: ', candyAddress);
 
-  await setTimeout(async () => {
-    console.log('checking candy machine');
-    const metaplex = new Metaplex(connection);
-    metaplex.use(keypairIdentity(richDudeKeypair));
+  // await setTimeout(async () => {
+  //   console.log('checking candy machine');
+  //   const metaplex = new Metaplex(connection);
+  //   metaplex.use(keypairIdentity(richDudeKeypair));
 
-    const candyMachine = await metaplex
-      .candyMachines()
-      .findByAddress({
-        address: new PublicKey(candyAddress),
-        commitment: 'confirmed',
-      })
-      .run();
+  //   const candyMachine = await metaplex
+  //     .candyMachines()
+  //     .findByAddress({
+  //       address: new PublicKey(candyAddress),
+  //       commitment: 'confirmed',
+  //     })
+  //     .run();
 
-    console.log(candyMachine);
+  //   console.log(candyMachine);
 
-    console.log('minting an NFT');
-    const mintedNft = await metaplex
-      .candyMachines()
-      .mint({
-        candyMachine,
-        payer: richDudeKeypair,
-        confirmOptions: {
-          skipPreflight: true,
-          commitment: 'confirmed',
-        },
-      })
-      .run();
+  //   console.log('minting an NFT');
+  //   const mintedNft = await metaplex
+  //     .candyMachines()
+  //     .mint({
+  //       candyMachine,
+  //       payer: richDudeKeypair,
+  //       confirmOptions: {
+  //         skipPreflight: true,
+  //         commitment: 'confirmed',
+  //       },
+  //     })
+  //     .run();
 
-    // TODO(will): this runs reportedly runs into a bot tax
-    // unclear why (and will fail without `skipPreflight`)
+  //   // TODO(will): this runs reportedly runs into a bot tax
+  //   // unclear why (and will fail without `skipPreflight`)
 
-    console.log(mintedNft);
-  }, 5000);
+  //   console.log(mintedNft);
+  // }, 5000);
 
   server.stop();
 };

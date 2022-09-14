@@ -226,7 +226,8 @@ const runUploadV2UsingHiddenSettings = async (
       config['price'] as number,
       mintInfo.decimals,
     );
-    config['tokenMint'] = config['splToken'];
+    config['tokenMint'] = new PublicKey(config['splToken']);
+    config['price'] = price;
     console.log(config['splToken']);
     console.log(config['price']);
     console.log(formatAmount(price));
