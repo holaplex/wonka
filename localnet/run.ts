@@ -20,6 +20,7 @@ import {
   token,
   findAssociatedTokenAccountPda,
   SplTokenAmount,
+  formatAmount,
 } from '@metaplex-foundation/js';
 
 import { makeServer } from '../src/makeServer';
@@ -47,7 +48,7 @@ const ensureBalance = async (
   }
 };
 
-const ensureTokenAccount = async (
+const createTokenAssociatedTokenAccountIfNeeded = async (
   connection: Connection,
   tokenMint: PublicKey,
   payer: Keypair,
@@ -94,9 +95,6 @@ const createToken = async (
       },
     })
     .run();
-
-  console.log('Created Token Mint:');
-  console.log(createMintResult);
 
   // maybe create metadata account as well here?
 
@@ -242,7 +240,7 @@ const uploadCandyMachine = async (
 
   if (!!splTokenMint) {
     cmConfigJson['splToken'] = splTokenMint.toBase58();
-    const ownerAta = await ensureTokenAccount(
+    const ownerAta = await createTokenAssociatedTokenAccountIfNeeded(
       connection,
       splTokenMint,
       payerKeypair,
@@ -382,8 +380,21 @@ const main = async () => {
 
     console.log(candyMachine);
 
-    console.log('minting an NFT');
+    console.log('Candy Info');
+    console.log('Go Live: ', candyMachine.goLiveDate.toNumber());
+    console.log('Price: ', formatAmount(candyMachine.price));
+    console.log('Items Available: ', candyMachine.itemsAvailable.toNumber());
+    console.log('Items Remaining: ', candyMachine.itemsRemaining.toNumber());
+    console.log('Items Loaded: ', candyMachine.itemsLoaded.toNumber());
+    console.log('Items Minted', candyMachine.itemsMinted.toNumber());
 
+    const richDudeBalance = await connection.getTokenAccountBalance(
+      richDudeTokenAcct,
+      'finalized',
+    );
+    console.log('Rich Dude Token Balance: ', richDudeBalance.value.amount);
+
+    console.log('minting an NFT');
     const mintedNft = await metaplex
       .candyMachines()
       .mint({
