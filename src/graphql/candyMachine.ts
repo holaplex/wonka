@@ -201,17 +201,17 @@ const runUploadV2UsingHiddenSettings = async (
     hash: new Array(32).fill(0),
   };
 
-  // "splTokenAccount": "BvvL5QRyhszHeV5ZXt8EWGJd1xUzsFVjSohsTkH5EPSL",  # campus pubkey usdc token account
-  // "splToken": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", # USDC
+  // these fields come in as strings, but we need to transform them to pubkey objects
   const pubkeyFields = [
     'solTreasuryAccount',
     'collection',
     'splTokenAccount',
     'splToken',
   ];
+
   for (const field of pubkeyFields) {
     if (!!config[field]) {
-      console.log('updating ', field);
+      console.log('updating ', field, 'key');
       config[field] = new PublicKey(config[field]);
     }
   }
@@ -226,30 +226,36 @@ const runUploadV2UsingHiddenSettings = async (
       config['price'] as number,
       mintInfo.decimals,
     );
-    config['tokenMint'] = new PublicKey(config['splToken']);
+
+    // TODO(will): cleanup the API so we don't need to rename these arbitrarily
+    config['tokenMint'] = config['splToken'];
+    config['wallet'] = config['splTokenAccount'];
     config['price'] = price;
-    console.log(config['splToken']);
-    console.log(config['price']);
-    console.log(formatAmount(price));
+  }
+
+  if (setCollectionMint) {
+    config['collection'] = new PublicKey(collectionMintParam);
   }
 
   config['candyMachine'] = args.candyMachineKeypair;
 
-  // TODO(will): drop unrecognized keys from config before passing to metaplex
+  // TODO(will): clarify which configs keys are actually needed
+  delete config['storage'];
+  delete config['nftStorageKey'];
+  delete config['splToken'];
+  delete config['splTokenAccount'];
+
   await retry(
     async (bail) => {
       try {
-        console.log(config['splToken']);
-        console.log(config['price']);
-        logger.info('Creating Candy Machine with config: \n', config);
+        logger.info('Creating Candy Machine');
         const { response, candyMachine } = await metaplex
           .candyMachines()
           .create(config)
           .run();
         logger.info(
-          'created candy machine: ' + candyMachine.address.toBase58(),
+          'Created Candy Machine: ' + candyMachine.address.toBase58(),
         );
-        logger.info(candyMachine);
         return { processId };
       } catch (err) {
         logger.error('Errored out', err);
