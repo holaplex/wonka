@@ -134,6 +134,8 @@ build/
 firebaseConfig.json
 firebaseAdminConfig.json
 cache-files
+.amman
+tmp
 
 # NOTE(will): Do we want to ignore this?
 .vscode

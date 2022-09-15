@@ -8,7 +8,6 @@ import {
   list,
 } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
-import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
 import { FanoutClient, MembershipModel } from '@glasseaters/hydra-sdk';
 import { Connection, clusterApiUrl, Keypair, PublicKey } from '@solana/web3.js';
 import { NATIVE_MINT } from '@solana/spl-token';
@@ -23,7 +22,7 @@ interface FanoutMember {
 export const SplFanout = objectType({
   name: 'SplFanout',
   description: 'The spl fanout result',
-  definition (t) {
+  definition(t) {
     t.nonNull.string('splTokenAddress', {
       description: 'SPL Token Address',
     });
@@ -36,7 +35,7 @@ export const SplFanout = objectType({
 export const CreateFanoutResult = objectType({
   name: 'CreateFanoutResult',
   description: 'The result for minting a NFT',
-  definition (t) {
+  definition(t) {
     t.nonNull.string('message', {
       description: 'Operation message',
     });
@@ -57,7 +56,7 @@ export const CreateFanoutResult = objectType({
 export const DisperseFanoutResult = objectType({
   name: 'DisperseFanoutResult',
   description: 'The result for minting a NFT',
-  definition (t) {
+  definition(t) {
     t.nonNull.string('message', {
       description: 'Operation message',
     });
@@ -66,7 +65,7 @@ export const DisperseFanoutResult = objectType({
 
 export const FanoutMember = extendInputType({
   type: 'FanoutMember',
-  definition (t) {
+  definition(t) {
     t.nonNull.field('publicKey', {
       type: 'String',
       description: 'Public key of member address',
@@ -102,7 +101,7 @@ export const CreateFanout = mutationField('createFanout', {
         'Token mint addresses for which the fanout will create token accounts to distribute from, leave empty for a native SOL only fanout.',
     }),
   },
-  async resolve (_, args, ctx: YogaInitialContext) {
+  async resolve(_, args, ctx: YogaInitialContext) {
     let authorityWallet: Wallet = null!;
     const connection = new Connection(process.env.RPC_ENDPOINT, 'confirmed');
     let fanoutSdk: FanoutClient;
@@ -165,13 +164,11 @@ export const CreateFanout = mutationField('createFanout', {
     if (args.splTokenAddresses) {
       for (var i = 0; i < args.splTokenAddresses.length; i++) {
         try {
-          const {
-            fanoutForMint,
-            tokenAccount,
-          } = await fanoutSdk.initializeFanoutForMint({
-            fanout: init.fanout,
-            mint: new PublicKey(args.splTokenAddresses[i]),
-          });
+          const { fanoutForMint, tokenAccount } =
+            await fanoutSdk.initializeFanoutForMint({
+              fanout: init.fanout,
+              mint: new PublicKey(args.splTokenAddresses[i]),
+            });
           splFanoutResult.push({
             splTokenAddress: new PublicKey(args.splTokenAddresses[i]),
             splTokenWallet: tokenAccount,
@@ -240,7 +237,7 @@ export const DisperseFanout = mutationField('disperseFanout', {
         'Token mint addresses for which the fanout will distribute from, leave empty for a native SOL only distribution',
     }),
   },
-  async resolve (_, args, ctx: YogaInitialContext) {
+  async resolve(_, args, ctx: YogaInitialContext) {
     let payerWallet: Wallet = null!;
     const connection = new Connection(process.env.RPC_ENDPOINT, 'confirmed');
     let fanoutSdk: FanoutClient;
