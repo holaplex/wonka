@@ -190,8 +190,6 @@ const runUploadV2UsingHiddenSettings = async (
   // here we need to make a few modifications and type conversions
   // on the config so that the metaplex sdk is happy.
 
-  // Token mint not being set
-
   config['hiddenSettings'] = {
     name: templateNftMetadata['name'],
     uri: nftMetadataUploadedFileUri,
