@@ -317,8 +317,8 @@ const main = async () => {
     log: console.log,
   });
 
-  const [richDudePubKey, richDudeKeypair] = await amman.loadOrGenKeypair(
-    'rich-dude',
+  const [richPersonPubkey, richPersonKeypair] = await amman.loadOrGenKeypair(
+    'rich-person',
   );
   const [tokenCreatorPubkey, tokenCreatorKeypair] =
     await amman.loadOrGenKeypair('token-creator');
@@ -328,7 +328,7 @@ const main = async () => {
   const [tokenMintAuthPubkey, tokenMintAuthKeypair] =
     await amman.genLabeledKeypair('my-token-authority-keypair');
 
-  await ensureBalance(amman, connection, richDudePubKey, 1000);
+  await ensureBalance(amman, connection, richPersonPubkey, 1000);
   await ensureBalance(amman, connection, tokenCreatorPubkey, 1000);
 
   const [tokenMintAddress, tokenAccountAddress] = await createToken(
@@ -343,17 +343,17 @@ const main = async () => {
     connection,
     tokenMintPubkey,
     tokenMintAuthKeypair,
-    richDudeKeypair,
-    richDudePubKey,
+    richPersonKeypair,
+    richPersonPubkey,
     token(1, 6),
   );
 
-  const richDudeTokenAcct = findAssociatedTokenAccountPda(
+  const richPersonTokenAcct = findAssociatedTokenAccountPda(
     tokenMintPubkey,
-    richDudePubKey,
+    richPersonPubkey,
   );
 
-  console.log('Rich Dude Token Acct: ', richDudeTokenAcct.toBase58());
+  console.log('Rich Person Token Acct: ', richPersonTokenAcct.toBase58());
 
   const nft = await createCollectionNft(amman, connection);
   const candyAddress = await uploadCandyMachine(
@@ -368,7 +368,7 @@ const main = async () => {
   await setTimeout(async () => {
     console.log('checking candy machine');
     const metaplex = new Metaplex(connection);
-    metaplex.use(keypairIdentity(richDudeKeypair));
+    metaplex.use(keypairIdentity(richPersonKeypair));
 
     const candyMachine = await metaplex
       .candyMachines()
@@ -388,19 +388,19 @@ const main = async () => {
     console.log('Items Loaded: ', candyMachine.itemsLoaded.toNumber());
     console.log('Items Minted', candyMachine.itemsMinted.toNumber());
 
-    const richDudeBalance = await connection.getTokenAccountBalance(
-      richDudeTokenAcct,
+    const richPersonBalance = await connection.getTokenAccountBalance(
+      richPersonTokenAcct,
       'finalized',
     );
-    console.log('Rich Dude Token Balance: ', richDudeBalance.value.amount);
+    console.log('Rich Person Token Balance: ', richPersonBalance.value.amount);
 
     console.log('minting an NFT');
     const mintedNft = await metaplex
       .candyMachines()
       .mint({
         candyMachine,
-        payer: richDudeKeypair,
-        payerToken: richDudeTokenAcct,
+        payer: richPersonKeypair,
+        payerToken: richPersonTokenAcct,
         confirmOptions: {
           skipPreflight: true,
           commitment: 'confirmed',
