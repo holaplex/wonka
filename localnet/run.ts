@@ -63,9 +63,6 @@ const ensureTokenAccount = async (
     owner,
   );
 
-  console.log('created ATA for: ', tokenMint.toBase58(), owner.toBase58());
-  console.log('address was: ', ataAddress.toBase58());
-
   const tx = new Transaction().add(createTokenIx);
   const txResult = await connection.sendTransaction(tx, [payer]);
   console.log(txResult);
