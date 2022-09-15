@@ -8,7 +8,7 @@ import {
   queryField,
 } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
-import { web3 } from '@project-serum/anchor';
+import { BN, web3 } from '@project-serum/anchor';
 import { uuid as uuidv4, isUuid } from 'uuidv4';
 import path from 'path';
 import fs from 'fs/promises';
@@ -16,14 +16,13 @@ import { getType } from 'mime';
 import winston from 'winston';
 import rimraf from 'rimraf';
 import { uploadV2 } from '../../cli/commands/upload-logged';
-import { loadCandyProgramV2 } from '../../cli/helpers/accounts';
+import { getTokenMint, loadCandyProgramV2 } from '../../cli/helpers/accounts';
 import {
   getCandyMachineV2ConfigFromPayload,
   parseCollectionMintPubkey,
 } from '../../cli/helpers/various';
 import { StorageType } from '../../cli/helpers/storage-type';
 import { download } from '../lib/helpers/downloadFile';
-import { unzip } from '../lib/helpers/unZipFile';
 import { CACHE_PATH, EXTENSION_JSON } from '../../cli/helpers/constants';
 import mkdirp from 'mkdirp';
 import base58 from 'bs58';
@@ -33,19 +32,17 @@ import {
   Metaplex,
   toMetaplexFile,
   sol,
+  token,
+  Currency,
+  Amount,
+  SplTokenAmount,
+  formatAmount,
 } from '@metaplex-foundation/js';
 import { nftStorage } from '@metaplex-foundation/js-plugin-nft-storage';
-import {
-  Connection,
-  Keypair,
-  PublicKey,
-  PublicKeyInitData,
-} from '@solana/web3.js';
-import {
-  ammanMockStorage,
-  AmmanMockStorageDriver,
-} from '@metaplex-foundation/amman-client';
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
+import { ammanMockStorage } from '@metaplex-foundation/amman-client';
 import exec from 'await-exec';
+import { MintInfo, MintLayout } from '@solana/spl-token';
 
 const dirname = path.resolve();
 const SUPPORTED_MEDIA_FILE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.mp4'];
@@ -152,7 +149,6 @@ const runUploadV2UsingHiddenSettings = async (
   const storageDriver = metaplex.storage();
 
   // First we need to upload the necessary NFT files from the zip
-
   const zipFilesDir = await downloadZip(filesZipUrl, processId);
   const templateNftPath = path.join(zipFilesDir, NFT_METADATA_FILENAME);
   const templateNftMetadataStr = await fs.readFile(templateNftPath, 'utf-8');
@@ -203,29 +199,61 @@ const runUploadV2UsingHiddenSettings = async (
     hash: new Array(32).fill(0),
   };
 
-  const pubkeyFields = ['solTreasuryAccount', 'collection'];
+  // these fields come in as strings, but we need to transform them to pubkey objects
+  const pubkeyFields = [
+    'solTreasuryAccount',
+    'collection',
+    'splTokenAccount',
+    'splToken',
+  ];
+
   for (const field of pubkeyFields) {
     if (!!config[field]) {
+      console.log('updating ', field, 'key');
       config[field] = new PublicKey(config[field]);
     }
   }
 
   config['authority'] = walletKeyPair;
-  config['price'] = sol(config['price'] as number);
+  if (!!config['solTreasuryAccount']) {
+    config['price'] = sol(config['price'] as number);
+  } else {
+    const mintAcct = await connection.getAccountInfo(config['splToken']);
+    const mintInfo = MintLayout.decode(mintAcct.data) as MintInfo;
+    const price: SplTokenAmount = token(
+      config['price'] as number,
+      mintInfo.decimals,
+    );
+
+    // TODO(will): cleanup the API so we don't need to rename these arbitrarily
+    config['tokenMint'] = config['splToken'];
+    config['wallet'] = config['splTokenAccount'];
+    config['price'] = price;
+  }
+
+  if (setCollectionMint) {
+    config['collection'] = new PublicKey(collectionMintParam);
+  }
+
   config['candyMachine'] = args.candyMachineKeypair;
+
+  // TODO(will): clarify which configs keys are actually needed
+  delete config['storage'];
+  delete config['nftStorageKey'];
+  delete config['splToken'];
+  delete config['splTokenAccount'];
 
   await retry(
     async (bail) => {
       try {
-        logger.info('Creating Candy Machine with config: \n', config);
+        logger.info('Creating Candy Machine');
         const { response, candyMachine } = await metaplex
           .candyMachines()
           .create(config)
           .run();
         logger.info(
-          'created candy machine: ' + candyMachine.address.toBase58(),
+          'Created Candy Machine: ' + candyMachine.address.toBase58(),
         );
-        logger.info(candyMachine);
         return { processId };
       } catch (err) {
         logger.error('Errored out', err);

@@ -1,31 +1,33 @@
+import path from 'path';
+import * as fs from 'fs';
 import { LOCALHOST } from '@metaplex-foundation/amman';
 import {
   Amman,
   ammanMockStorage,
   AmmanMockStorageDriver,
 } from '@metaplex-foundation/amman-client';
-import { Connection, Keypair, PublicKey } from '@solana/web3.js';
-import path from 'path';
-import * as fs from 'fs';
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+  Token,
+} from '@solana/spl-token';
+import { Connection, Keypair, PublicKey, Transaction } from '@solana/web3.js';
 import {
   Metaplex,
   keypairIdentity,
   toMetaplexFile,
   Nft,
+  token,
+  findAssociatedTokenAccountPda,
+  SplTokenAmount,
+  formatAmount,
 } from '@metaplex-foundation/js';
 
-import { CreateFanout } from '../src/graphql';
-import * as graphqlTypes from '../src/graphql';
-import { makeSchema } from 'nexus';
-import { resolveObjMapThunk } from 'graphql';
-
-import { asNexusMethod } from 'nexus';
 import { makeServer } from '../src/makeServer';
-import { GraphQLClient, gql, RequestDocument } from 'graphql-request';
+import { GraphQLClient, gql } from 'graphql-request';
 import base58 from 'bs58';
-import { defaultYogaLogger } from '@graphql-yoga/common';
 import { Fanout, FanoutClient } from '@glasseaters/hydra-sdk';
-import { Wallet } from '@project-serum/anchor';
+import { BN, Wallet } from '@project-serum/anchor';
 
 const makeTestClient = (): GraphQLClient => {
   return new GraphQLClient('http://0.0.0.0:4000/graphql');
@@ -46,141 +48,87 @@ const ensureBalance = async (
   }
 };
 
-const createFanout = async (
+const createTokenAssociatedTokenAccountIfNeeded = async (
+  connection: Connection,
+  tokenMint: PublicKey,
   payer: Keypair,
-  fanoutName: String,
-  members: Array<{
-    wallet: PublicKey;
-    shares: number;
-    splTokenAcct?: PublicKey;
-  }>,
-) => {
-  console.log('creating fanout');
-  const client = makeTestClient();
-  let fanoutMembers = [];
-
-  for (const member of members) {
-    fanoutMembers.push({
-      publicKey: member.wallet.toBase58(),
-      shares: member.shares,
-    });
-  }
-  const payerSecret = base58.encode(payer.secretKey);
-  console.log('payer secret is ', payer.secretKey.length, 'bytes');
-
-  const result = await client.request(
-    gql`
-      mutation createFanout(
-        $keyPair: String!
-        $name: String!
-        $members: [FanoutMember]!
-        $splTokenAddresses: [String]
-      ) {
-        createFanout(
-          keyPair: $keyPair
-          name: $name
-          members: $members
-          splTokenAddresses: $splTokenAddresses
-        ) {
-          message
-          fanoutPublicKey
-          solanaWalletAddress
-        }
-      }
-    `,
-    {
-      keyPair: payerSecret,
-      name: fanoutName,
-      members: fanoutMembers,
-      splTokenAddresses: null,
-    },
+  owner = payer.publicKey,
+): Promise<PublicKey> => {
+  const ataAddress = findAssociatedTokenAccountPda(tokenMint, owner);
+  const createTokenIx = Token.createAssociatedTokenAccountInstruction(
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+    TOKEN_PROGRAM_ID,
+    tokenMint,
+    ataAddress,
+    owner,
+    owner,
   );
 
-  console.log(result);
-  return result;
+  const tx = new Transaction().add(createTokenIx);
+  const txResult = await connection.sendTransaction(tx, [payer]);
+  console.log(txResult);
+  await connection.confirmTransaction(txResult, 'finalized');
+  return ataAddress;
 };
 
-const disperseFanout = async (payer: Keypair, fanoutAddress: PublicKey) => {
-  console.log('dispersing fanout');
-  const payerSecret = base58.encode(payer.secretKey);
-  const client = makeTestClient();
-  const result = await client.request(
-    gql`
-      mutation disperseFanout(
-        $keyPair: String!
-        $fanoutPublicKey: String!
-        $splTokenAddresses: [String]
-      ) {
-        disperseFanout(
-          keyPair: $keyPair
-          fanoutPublicKey: $fanoutPublicKey
-          splTokenAddresses: $splTokenAddresses
-        ) {
-          message
-        }
-      }
-    `,
-    {
-      keyPair: payerSecret,
-      fanoutPublicKey: fanoutAddress.toBase58(),
-      splTokenAddresses: null,
-    },
-  );
+const createToken = async (
+  amman: Amman,
+  connection: Connection,
+  tokenMint: Keypair,
+  tokenMintAuthority: Keypair,
+  payer: Keypair,
+  owner: Keypair = payer,
+): Promise<[PublicKey, PublicKey]> => {
+  const metaplex = new Metaplex(connection);
+  const createMintResult = await metaplex
+    .tokens()
+    .createTokenWithMint({
+      decimals: 6,
+      initialSupply: token(1000 * Math.pow(10, 6)),
+      mint: tokenMint,
+      mintAuthority: tokenMintAuthority,
+      freezeAuthority: tokenMintAuthority.publicKey,
+      owner: owner.publicKey,
+      payer: payer,
+      confirmOptions: {
+        commitment: 'finalized',
+      },
+    })
+    .run();
 
-  console.log('done with disperse...');
-  console.log(result);
+  // maybe create metadata account as well here?
+
+  return [createMintResult.token.mint.address, createMintResult.token.address];
 };
 
-const testFanout = async (amman: Amman, connection: Connection) => {
-  const [fanoutOwnerPubkey, fanoutOwnerKeypair] = await amman.loadOrGenKeypair(
-    'fanoutOwner',
+const mintTokens = async (
+  connection: Connection,
+  tokenMint: PublicKey,
+  tokenAuthority: Keypair,
+  payer: Keypair,
+  mintTokensTo: PublicKey,
+  amount: SplTokenAmount,
+): Promise<void> => {
+  const metaplex = new Metaplex(connection);
+  metaplex.use(keypairIdentity(payer));
+  const tokenMintResult = await metaplex
+    .tokens()
+    .mint({
+      mintAddress: tokenMint,
+      amount: amount,
+      toOwner: mintTokensTo,
+      mintAuthority: tokenAuthority,
+      payer: payer,
+      confirmOptions: { commitment: 'finalized' },
+    })
+    .run();
+
+  // const balance = await connection.getTokenAccountBalance()
+  console.log(
+    'Minted tokens (' + tokenMint.toBase58() + ') to owner: ',
+    mintTokensTo.toBase58(),
   );
-
-  await amman.airdrop(connection, fanoutOwnerPubkey, 100);
-
-  const [fanoutMember1Pubkey, fanoutMember1Keypair] =
-    await amman.loadOrGenKeypair('fanoutMember1');
-  const [fanoutMember2Pubkey, fanoutMember2Keypair] =
-    await amman.loadOrGenKeypair('fanoutMember2');
-
-  const createFanoutResult = createFanout(fanoutOwnerKeypair, 'TestFanout', [
-    { wallet: fanoutMember1Pubkey, shares: 100 },
-    { wallet: fanoutMember2Pubkey, shares: 300 },
-  ]);
-
-  const fanoutClient = new FanoutClient(
-    connection,
-    new Wallet(fanoutOwnerKeypair),
-  );
-
-  // const fanoutPubkey = new PublicKey(createFanoutResult['fanoutPublicKey']);
-  // const fanoutSolWalletAddress = new PublicKey(
-  //   createFanoutResult['solanaWalletAddress'],
-  // );
-
-  const fanoutPubkey = new PublicKey(
-    '3scvqz8pKnmjxWTwXF9wroU8uTCMpdhzuCQ7RPxozP7A',
-  );
-
-  const fanoutSolWalletAddress = new PublicKey(
-    '8rbcaDFj9S4tjYL29d1T8RFxDy8bx3EtxaddjouXdH2f',
-  );
-
-  const fetchedFanoutMembers = await fanoutClient.getMembers({
-    fanout: fanoutPubkey,
-  });
-
-  for (const memberPubkey of fetchedFanoutMembers) {
-    console.log('FanoutMember: ', memberPubkey.toBase58());
-  }
-
-  const fanoutAcct = await Fanout.fromAccountAddress(connection, fanoutPubkey);
-  console.log('fanout account: ');
-  console.log(fanoutAcct);
-
-  await amman.airdrop(connection, fanoutSolWalletAddress, 1);
-
-  const disperseFanoutResult = disperseFanout(fanoutOwnerKeypair, fanoutPubkey);
+  console.log(tokenMintResult);
 };
 
 const createCollectionNft = async (
@@ -250,6 +198,8 @@ const createCollectionNft = async (
 const uploadCandyMachine = async (
   amman: Amman,
   connection: Connection,
+  splTokenMint?: PublicKey,
+  nativeWallet?: PublicKey,
 ): Promise<string | null> => {
   // prepare the zip file
   const storage = amman.createMockStorageDriver('amman-mock-storage');
@@ -263,10 +213,7 @@ const uploadCandyMachine = async (
   const [payerPubkey, payerKeypair] = await amman.loadOrGenKeypair(
     'collection_owner',
   );
-
   await ensureBalance(amman, connection, payerPubkey, 100);
-  const [treasPubkey, treasKeypair] = await amman.loadOrGenKeypair('treasury');
-  await ensureBalance(amman, connection, treasPubkey, 1);
 
   const [collectionMint] = await amman.addr.resolveLabel(
     'super-cool-collection-mint',
@@ -276,11 +223,9 @@ const uploadCandyMachine = async (
 
   const cmConfigJson: any = {
     price: 0.01,
-    sellerFeeBasisPoints: 0,
+    sellerFeeBasisPoints: 100,
     itemsAvailable: 10,
     gatekeeper: null,
-    solTreasuryAccount: treasPubkey.toBase58(),
-    collection: collectionMint,
     goLiveDate: 1654999999,
     endSettings: null,
     whitelistMintSettings: null,
@@ -292,6 +237,26 @@ const uploadCandyMachine = async (
     noRetainAuthority: false,
     noMutable: false,
   };
+
+  if (!!splTokenMint) {
+    cmConfigJson['splToken'] = splTokenMint.toBase58();
+    const ownerAta = await createTokenAssociatedTokenAccountIfNeeded(
+      connection,
+      splTokenMint,
+      payerKeypair,
+    );
+    cmConfigJson['splTokenAccount'] = ownerAta.toBase58();
+  } else if (!!nativeWallet) {
+    const [treasPubkey, treasKeypair] = await amman.loadOrGenKeypair(
+      'treasury',
+    );
+    await ensureBalance(amman, connection, treasPubkey, 1);
+    cmConfigJson['solTreasuryAccount'] = nativeWallet.toBase58();
+  } else {
+    throw Error(
+      'need to provide either a native wallet or an spl mint and account for treasury',
+    );
+  }
 
   const client = makeTestClient();
 
@@ -352,20 +317,58 @@ const main = async () => {
     log: console.log,
   });
 
-  const [richDudePubKey, richDudeKeypair] = await amman.loadOrGenKeypair(
-    'rich-dude',
+  const [richPersonPubkey, richPersonKeypair] = await amman.loadOrGenKeypair(
+    'rich-person',
   );
-  await ensureBalance(amman, connection, richDudePubKey, 1000);
+  const [tokenCreatorPubkey, tokenCreatorKeypair] =
+    await amman.loadOrGenKeypair('token-creator');
+  const [tokenMintPubkey, tokenMintKeypair] = await amman.genLabeledKeypair(
+    'my-token-mint-keypair',
+  );
+  const [tokenMintAuthPubkey, tokenMintAuthKeypair] =
+    await amman.genLabeledKeypair('my-token-authority-keypair');
+
+  await ensureBalance(amman, connection, richPersonPubkey, 1000);
+  await ensureBalance(amman, connection, tokenCreatorPubkey, 1000);
+
+  const [tokenMintAddress, tokenAccountAddress] = await createToken(
+    amman,
+    connection,
+    tokenMintKeypair,
+    tokenMintAuthKeypair,
+    tokenCreatorKeypair,
+  );
+
+  await mintTokens(
+    connection,
+    tokenMintPubkey,
+    tokenMintAuthKeypair,
+    richPersonKeypair,
+    richPersonPubkey,
+    token(1, 6),
+  );
+
+  const richPersonTokenAcct = findAssociatedTokenAccountPda(
+    tokenMintPubkey,
+    richPersonPubkey,
+  );
+
+  console.log('Rich Person Token Acct: ', richPersonTokenAcct.toBase58());
 
   const nft = await createCollectionNft(amman, connection);
-  const candyAddress = await uploadCandyMachine(amman, connection);
+  const candyAddress = await uploadCandyMachine(
+    amman,
+    connection,
+    tokenMintAddress,
+    tokenAccountAddress,
+  );
 
   console.log('candyAddress: ', candyAddress);
 
   await setTimeout(async () => {
     console.log('checking candy machine');
     const metaplex = new Metaplex(connection);
-    metaplex.use(keypairIdentity(richDudeKeypair));
+    metaplex.use(keypairIdentity(richPersonKeypair));
 
     const candyMachine = await metaplex
       .candyMachines()
@@ -377,12 +380,27 @@ const main = async () => {
 
     console.log(candyMachine);
 
+    console.log('Candy Info');
+    console.log('Go Live: ', candyMachine.goLiveDate.toNumber());
+    console.log('Price: ', formatAmount(candyMachine.price));
+    console.log('Items Available: ', candyMachine.itemsAvailable.toNumber());
+    console.log('Items Remaining: ', candyMachine.itemsRemaining.toNumber());
+    console.log('Items Loaded: ', candyMachine.itemsLoaded.toNumber());
+    console.log('Items Minted', candyMachine.itemsMinted.toNumber());
+
+    const richPersonBalance = await connection.getTokenAccountBalance(
+      richPersonTokenAcct,
+      'finalized',
+    );
+    console.log('Rich Person Token Balance: ', richPersonBalance.value.amount);
+
     console.log('minting an NFT');
     const mintedNft = await metaplex
       .candyMachines()
       .mint({
         candyMachine,
-        payer: richDudeKeypair,
+        payer: richPersonKeypair,
+        payerToken: richPersonTokenAcct,
         confirmOptions: {
           skipPreflight: true,
           commitment: 'confirmed',
