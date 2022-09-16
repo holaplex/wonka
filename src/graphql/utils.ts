@@ -1,15 +1,6 @@
 import { uuid as uuidv4 } from 'uuidv4';
 import path from 'path';
 import winston from 'winston';
-import {
-  nonNull,
-  mutationField,
-  arg,
-  objectType,
-  extendInputType,
-  stringArg,
-  list,
-} from 'nexus';
 
 const LOGS_DIR = path.resolve('.', 'logs');
 

@@ -6,7 +6,7 @@ import {
   objectType,
 } from 'nexus';
 
-import { decryptEncodedPayload } from '../lib/cryptography/utils';
+import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
 
 export const EncryptedMessageResult = objectType({
   name: 'EncryptedMessageResult',
