@@ -1,5 +1,4 @@
 import https from 'https';
-import http from 'http';
 import fs from 'fs';
 
 export const download = (url: string, dest: string) =>
@@ -8,7 +7,7 @@ export const download = (url: string, dest: string) =>
     fs.access(dest, fs.constants.F_OK, (err) => {
       if (err === null) reject('File already exists');
 
-      const responseHandler = (response: http.IncomingMessage): void => {
+      const request = https.get(url, (response) => {
         if (response.statusCode === 200) {
           const file = fs.createWriteStream(dest, { flags: 'wx' });
           file.on('finish', () => resolve());
@@ -26,15 +25,7 @@ export const download = (url: string, dest: string) =>
             `Server responded with ${response.statusCode}: ${response.statusMessage}`,
           );
         }
-      };
-
-      let request: http.ClientRequest;
-      if (url.startsWith('https')) {
-        request = https.get(url, responseHandler);
-      } else {
-        request = http.get(url, responseHandler);
-      }
-
+      });
       request.on('error', (err) => {
         reject(err.message);
       });
