@@ -399,6 +399,7 @@ const runUploadV2 = async (
         let animationFileCount = 0;
         let jsonFileCount = 0;
 
+        logger.info('Now Downloading Zip: ', filesZipUrl);
         const zipFilesDir = await downloadZip(filesZipUrl, processId);
         let files = await fs.readdir(zipFilesDir);
         files = files.map((file) => path.join(zipFilesDir, file));
