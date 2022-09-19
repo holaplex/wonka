@@ -613,7 +613,7 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
     ),
     executeSync: nonNull(
       booleanArg({
-        default: true,
+        default: false,
         description: 'if set to true, the upload will execute synchronously',
       }),
     ),
