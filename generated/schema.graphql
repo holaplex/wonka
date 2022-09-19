@@ -83,7 +83,7 @@ type Mutation {
   authenticatedMutation(encryptedMessage: EncryptedMessage!): EncryptedMessageResult
   candyMachineUpload(
     """Candy Machine Creation callback URL"""
-    callbackUrl: String!
+    callbackUrl: String
 
     """Collection mint pubkey"""
     collectionMint: String!
@@ -93,6 +93,9 @@ type Mutation {
 
     """Solana env, either mainnet-beta | devnet | testnet"""
     env: String!
+
+    """if set to true, the upload will execute synchronously"""
+    executeSync: Boolean! = true
 
     """Zip file url with the assets"""
     filesZipUrl: String!

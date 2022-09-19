@@ -43,6 +43,7 @@ import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { ammanMockStorage } from '@metaplex-foundation/amman-client';
 import exec from 'await-exec';
 import { MintInfo, MintLayout } from '@solana/spl-token';
+import Axios from 'axios';
 
 const dirname = path.resolve();
 const SUPPORTED_MEDIA_FILE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.mp4'];
@@ -210,7 +211,7 @@ const runUploadV2UsingHiddenSettings = async (
 
   for (const field of pubkeyFields) {
     if (!!config[field]) {
-      console.log('updating ', field, 'key');
+      logger.info('updating ', field, 'key');
       config[field] = new PublicKey(config[field]);
     }
   }
@@ -244,7 +245,8 @@ const runUploadV2UsingHiddenSettings = async (
   delete config['splToken'];
   delete config['splTokenAccount'];
 
-  await retry(
+  let candyMachinePubkey: PublicKey | null = null;
+  const result = await retry(
     async (bail) => {
       try {
         logger.info('Creating Candy Machine');
@@ -255,7 +257,7 @@ const runUploadV2UsingHiddenSettings = async (
         logger.info(
           'Created Candy Machine: ' + candyMachine.address.toBase58(),
         );
-        return { processId };
+        candyMachinePubkey = candyMachine.address;
       } catch (err) {
         logger.error('Errored out', err);
         throw err;
@@ -270,6 +272,18 @@ const runUploadV2UsingHiddenSettings = async (
       },
     },
   );
+
+  if (!!args.callbackUrl && !!args.guid && !!candyMachinePubkey) {
+    logger.info(`Sending post request to Callback URL: ${args.callbackUrl}`);
+    const callbackResult = await Axios.post(args.callbackUrl, {
+      candyMachineId: candyMachinePubkey.toBase58(),
+      creator: walletKeyPair.publicKey.toBase58(),
+      guid: args.guid,
+    });
+    logger.info('Callback Result Status:', callbackResult.status);
+  }
+
+  logger.info('Exiting runUploadV2UsingHiddenSettings');
 };
 
 const runUploadV2 = async (
@@ -553,11 +567,9 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         description: 'Wallet keypair',
       }),
     ),
-    callbackUrl: nonNull(
-      stringArg({
-        description: 'Candy Machine Creation callback URL',
-      }),
-    ),
+    callbackUrl: stringArg({
+      description: 'Candy Machine Creation callback URL',
+    }),
     config: nonNull(
       arg({
         type: 'JSON',
@@ -597,6 +609,12 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         default: false,
         description:
           'if set to true, the candy machine config will be modified to use hidden settings',
+      }),
+    ),
+    executeSync: nonNull(
+      booleanArg({
+        default: false,
+        description: 'if set to true, the upload will execute synchronously',
       }),
     ),
   },
@@ -648,7 +666,7 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
     //
     const candyMachineKeypair = Keypair.generate();
     if (args.useHiddenSettings) {
-      runUploadV2UsingHiddenSettings(logger, processId, {
+      const uploadPromise = runUploadV2UsingHiddenSettings(logger, processId, {
         ...args,
         candyMachineKeypair: candyMachineKeypair,
       })
@@ -659,8 +677,13 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         .finally(async () => {
           removeStorageDir();
         });
+
+      if (args.executeSync) {
+        logger.info('Waiting for runUploadV2UsingHiddenSettings');
+        await uploadPromise;
+      }
     } else {
-      runUploadV2(logger, processId, args)
+      const uploadPromise = runUploadV2(logger, processId, args)
         .catch((err) => {
           logger.error('Aborting runUploadV2 due to error');
           logger.error(err);
@@ -668,6 +691,11 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         .finally(async () => {
           removeStorageDir();
         });
+
+      if (args.executeSync) {
+        logger.info('Waiting for runUploadV2');
+        await uploadPromise;
+      }
     }
 
     const candyMachineAddress = candyMachineKeypair.publicKey.toBase58();

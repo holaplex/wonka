@@ -229,10 +229,11 @@ export interface NexusGenArgTypes {
       encryptedMessage: NexusGenInputs['EncryptedMessage']; // EncryptedMessage!
     }
     candyMachineUpload: { // args
-      callbackUrl: string; // String!
+      callbackUrl?: string | null; // String
       collectionMint: string; // String!
       config: NexusGenScalars['JSON']; // JSON!
       env: string; // String!
+      executeSync: boolean; // Boolean!
       filesZipUrl: string; // String!
       guid?: string | null; // String
       keyPair: string; // String!

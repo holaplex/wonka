@@ -264,7 +264,7 @@ const uploadCandyMachine = async (
     gql`
       mutation candyMachineUpload(
         $keyPair: String!
-        $callbackUrl: String!
+        $callbackUrl: String
         $config: JSON!
         $collectionMint: String!
         $setCollectionMint: Boolean!
@@ -273,6 +273,7 @@ const uploadCandyMachine = async (
         $rpc: String!
         $env: String!
         $useHiddenSettings: Boolean!
+        $executeSync: Boolean!
       ) {
         candyMachineUpload(
           keyPair: $keyPair
@@ -285,6 +286,7 @@ const uploadCandyMachine = async (
           rpc: $rpc
           env: $env
           useHiddenSettings: $useHiddenSettings
+          executeSync: $executeSync
         ) {
           processId
           candyMachineAddress
@@ -293,7 +295,7 @@ const uploadCandyMachine = async (
     `,
     {
       keyPair: base58.encode(payerKeypair.secretKey),
-      callbackUrl: 'http://fakeurl.com/callback',
+      callbackUrl: null,
       config: cmConfigJson,
       collectionMint: collectionMint,
       setCollectionMint: true,
@@ -302,6 +304,7 @@ const uploadCandyMachine = async (
       env: 'localnet',
       rpc: LOCALHOST,
       useHiddenSettings: true,
+      executeSync: true,
     },
   );
 
@@ -403,7 +406,7 @@ const main = async () => {
         payerToken: richPersonTokenAcct,
         confirmOptions: {
           skipPreflight: true,
-          commitment: 'confirmed',
+          commitment: 'finalized',
         },
       })
       .run();
