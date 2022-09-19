@@ -149,6 +149,7 @@ const runUploadV2UsingHiddenSettings = async (
   const storageDriver = metaplex.storage();
 
   // First we need to upload the necessary NFT files from the zip
+  logger.info('Downloading Zip: ', filesZipUrl);
   const zipFilesDir = await downloadZip(filesZipUrl, processId);
   const templateNftPath = path.join(zipFilesDir, NFT_METADATA_FILENAME);
   const templateNftMetadataStr = await fs.readFile(templateNftPath, 'utf-8');
