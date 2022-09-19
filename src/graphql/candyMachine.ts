@@ -6,7 +6,6 @@ import {
   stringArg,
   booleanArg,
   queryField,
-  nullable,
 } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
 import { BN, web3 } from '@project-serum/anchor';
