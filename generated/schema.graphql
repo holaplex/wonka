@@ -95,7 +95,7 @@ type Mutation {
     env: String!
 
     """if set to true, the upload will execute synchronously"""
-    executeSync: Boolean! = true
+    executeSync: Boolean! = false
 
     """Zip file url with the assets"""
     filesZipUrl: String!

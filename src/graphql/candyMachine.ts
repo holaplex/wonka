@@ -258,6 +258,15 @@ const runUploadV2UsingHiddenSettings = async (
           'Created Candy Machine: ' + candyMachine.address.toBase58(),
         );
         candyMachinePubkey = candyMachine.address;
+
+        logger.info('waiting for tx to finalize: ', response.signature);
+        // Wait for the transaction to finalize before we call the callback
+        const confirmationResponse = await connection.confirmTransaction(
+          response.signature,
+          'finalized',
+        );
+
+        logger.info('Confirmation: ', confirmationResponse);
       } catch (err) {
         logger.error('Errored out', err);
         throw err;
