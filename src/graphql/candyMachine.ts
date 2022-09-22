@@ -250,6 +250,7 @@ const runUploadV2UsingHiddenSettings = async (
     async (bail) => {
       try {
         logger.info('Creating Candy Machine');
+        logger.info(config)
         const { response, candyMachine } = await metaplex
           .candyMachines()
           .create(config)
