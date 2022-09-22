@@ -8,31 +8,292 @@ import {
   queryField,
 } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
-import { web3 } from '@project-serum/anchor';
+import { BN, web3 } from '@project-serum/anchor';
 import { uuid as uuidv4, isUuid } from 'uuidv4';
 import path from 'path';
 import fs from 'fs/promises';
 import { getType } from 'mime';
 import winston from 'winston';
 import rimraf from 'rimraf';
-import { uploadV2 } from '../../cli/commands/upload-logged.js';
-import { decryptEncodedPayload } from '../lib/cryptography/utils.js';
-import { loadCandyProgramV2 } from '../../cli/helpers/accounts.js';
+import { uploadV2 } from '../../cli/commands/upload-logged';
+import { getTokenMint, loadCandyProgramV2 } from '../../cli/helpers/accounts';
 import {
   getCandyMachineV2ConfigFromPayload,
   parseCollectionMintPubkey,
-} from '../../cli/helpers/various.js';
-import { StorageType } from '../../cli/helpers/storage-type.js';
-import { download } from '../lib/helpers/downloadFile.js';
-import { unzip } from '../lib/helpers/unZipFile.js';
-import { CACHE_PATH, EXTENSION_JSON } from '../../cli/helpers/constants.js';
+} from '../../cli/helpers/various';
+import { StorageType } from '../../cli/helpers/storage-type';
+import { download } from '../lib/helpers/downloadFile';
+import { CACHE_PATH, EXTENSION_JSON } from '../../cli/helpers/constants';
 import mkdirp from 'mkdirp';
-import { bs58 } from '@project-serum/anchor/dist/cjs/utils/bytes/index.js';
+import base58 from 'bs58';
 import retry from 'async-retry';
-import exec from 'await-exec'
+import {
+  keypairIdentity,
+  Metaplex,
+  toMetaplexFile,
+  sol,
+  token,
+  Currency,
+  Amount,
+  SplTokenAmount,
+  formatAmount,
+} from '@metaplex-foundation/js';
+import { nftStorage } from '@metaplex-foundation/js-plugin-nft-storage';
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
+import { ammanMockStorage } from '@metaplex-foundation/amman-client';
+import exec from 'await-exec';
+import { MintInfo, MintLayout } from '@solana/spl-token';
+import Axios from 'axios';
 
 const dirname = path.resolve();
-const storageDir = "/app/tmp";
+const SUPPORTED_MEDIA_FILE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.mp4'];
+const NFT_METADATA_FILENAME = '0.json';
+
+// Downloads a zip file from zipUrl and returns the directory where zipUrl was unpacked
+const downloadZip = async (
+  zipUrl: string,
+  processId: string,
+): Promise<string> => {
+  // Unpack zip file
+  const processDir = path.resolve(process.env.TMP_STORAGE_DIR, processId);
+  const zipFilesDir = path.resolve(processDir, 'files');
+  const zipFile = path.resolve(processDir, 'files.zip');
+
+  const dirExists = await fs
+    .stat(processDir)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!dirExists) {
+    await mkdirp(processDir);
+    await download(zipUrl, zipFile);
+    await exec('/usr/bin/7z x ' + zipFile + ` -y -o${zipFilesDir}`);
+  } else {
+    throw Error('zip dir already exists');
+  }
+
+  return zipFilesDir;
+};
+
+const keypairFromBase58String = (keypairStr: string): Keypair => {
+  const bytes = base58.decode(keypairStr);
+  return web3.Keypair.fromSecretKey(Uint8Array.from(bytes));
+};
+
+const contentTypeForFileName = (
+  fileName: string,
+  supportedFileTypes = SUPPORTED_MEDIA_FILE_EXTENSIONS,
+): string => {
+  const extensionToType = {
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.mp4': "video/mp4'",
+  };
+
+  const extension = fileName.split('.')[-1];
+  return extensionToType[extension];
+};
+
+const runUploadV2UsingHiddenSettings = async (
+  logger: winston.Logger,
+  processId: string,
+  args: {
+    candyMachineKeypair: Keypair;
+    collectionMint: string;
+    config: any;
+    callbackUrl: null | string;
+    guid?: string;
+    keyPair: string;
+    env: string;
+    filesZipUrl: string;
+    rpc: string;
+    setCollectionMint: boolean;
+  },
+) => {
+  const {
+    collectionMint: collectionMintParam,
+    setCollectionMint,
+    filesZipUrl,
+    config,
+    rpc,
+    env,
+    keyPair,
+  } = args;
+
+  logger.info('Uploading Candy Machine with hidden settings');
+
+  // setup connection and metaplex client
+  const walletKeyPair = keypairFromBase58String(keyPair);
+  const connection = new Connection(rpc);
+  const metaplex = new Metaplex(connection);
+  metaplex.use(keypairIdentity(walletKeyPair));
+
+  // NOTE(will, austin): might be preferable to find a way to inject this dependency
+  if (env === 'localnet') {
+    metaplex.use(ammanMockStorage('amman-mock-storage'));
+  } else {
+    if (config['storage'] !== 'nft-storage' || !config['nftStorageKey']) {
+      const message =
+        'hidden settings currently only works with nft storage and requires an nftStorageKey';
+      logger.error(message);
+      throw Error(message);
+    }
+
+    metaplex.use(
+      nftStorage({
+        token: config['nftStorageKey'],
+      }),
+    );
+  }
+
+  const storageDriver = metaplex.storage();
+
+  // First we need to upload the necessary NFT files from the zip
+  logger.info('Downloading Zip: ', filesZipUrl);
+  const zipFilesDir = await downloadZip(filesZipUrl, processId);
+  const templateNftPath = path.join(zipFilesDir, NFT_METADATA_FILENAME);
+  const templateNftMetadataStr = await fs.readFile(templateNftPath, 'utf-8');
+  let templateNftMetadata = JSON.parse(templateNftMetadataStr);
+  logger.info(templateNftMetadata);
+
+  // files look like:
+  // { uri: "0.png", type: "image/png" },
+  // { uri: "0.mp4", type: "video/mp4" },
+  const files = templateNftMetadata['properties']['files'];
+
+  for (let nftFile of files) {
+    const fileName = nftFile['uri'];
+    const filePath = path.join(zipFilesDir, fileName);
+    const fileBytes = await fs.readFile(filePath);
+    const contentType = contentTypeForFileName(fileName);
+    const metaplexFile = toMetaplexFile(fileBytes, fileName, {
+      contentType: contentType,
+      extension: fileName.split('.')[-1],
+    });
+    const uploadedFileUri = await storageDriver.upload(metaplexFile);
+
+    // update the nft metadata with uploaded uri
+    nftFile['uri'] = uploadedFileUri;
+    if (templateNftMetadata['image'] === fileName) {
+      templateNftMetadata['image'] = uploadedFileUri;
+    } else if (templateNftMetadata['animation_url'] == fileName) {
+      templateNftMetadata['animation_url'] = uploadedFileUri;
+    }
+  }
+
+  logger.info('Uploading NFT Metadata: \n', templateNftMetadata);
+  const nftMetadataUploadedFileUri = await storageDriver.uploadJson(
+    templateNftMetadata,
+  );
+
+  logger.info(nftMetadataUploadedFileUri);
+
+  // here we need to make a few modifications and type conversions
+  // on the config so that the metaplex sdk is happy.
+
+  config['hiddenSettings'] = {
+    name: templateNftMetadata['name'],
+    uri: nftMetadataUploadedFileUri,
+    // all zeroes should be fine since all the NFT's are the same
+    // in cases where nfts have different traits we will want to update this
+    // to be the hash of a file that specifies the mint order
+    hash: new Array(32).fill(0),
+  };
+
+  // these fields come in as strings, but we need to transform them to pubkey objects
+  const pubkeyFields = [
+    'solTreasuryAccount',
+    'collection',
+    'splTokenAccount',
+    'splToken',
+  ];
+
+  for (const field of pubkeyFields) {
+    if (!!config[field]) {
+      logger.info('updating ', field, 'key');
+      config[field] = new PublicKey(config[field]);
+    }
+  }
+
+  config['authority'] = walletKeyPair;
+  if (!!config['solTreasuryAccount']) {
+    config['price'] = sol(config['price'] as number);
+  } else {
+    const mintAcct = await connection.getAccountInfo(config['splToken']);
+    const mintInfo = MintLayout.decode(mintAcct.data) as MintInfo;
+    const price: SplTokenAmount = token(
+      config['price'] as number,
+      mintInfo.decimals,
+    );
+
+    // TODO(will): cleanup the API so we don't need to rename these arbitrarily
+    config['tokenMint'] = config['splToken'];
+    config['wallet'] = config['splTokenAccount'];
+    config['price'] = price;
+  }
+
+  if (setCollectionMint) {
+    config['collection'] = new PublicKey(collectionMintParam);
+  }
+
+  config['candyMachine'] = args.candyMachineKeypair;
+
+  // TODO(will): clarify which configs keys are actually needed
+  delete config['storage'];
+  delete config['nftStorageKey'];
+  delete config['splToken'];
+  delete config['splTokenAccount'];
+
+  let candyMachinePubkey: PublicKey | null = null;
+  const result = await retry(
+    async (bail) => {
+      try {
+        logger.info('Creating Candy Machine');
+        const { response, candyMachine } = await metaplex
+          .candyMachines()
+          .create(config)
+          .run();
+        logger.info(
+          'Created Candy Machine: ' + candyMachine.address.toBase58(),
+        );
+        candyMachinePubkey = candyMachine.address;
+
+        logger.info('waiting for tx to finalize: ', response.signature);
+        // Wait for the transaction to finalize before we call the callback
+        const confirmationResponse = await connection.confirmTransaction(
+          response.signature,
+          'finalized',
+        );
+
+        logger.info('Confirmation: ', confirmationResponse);
+      } catch (err) {
+        logger.error('Errored out', err);
+        throw err;
+      }
+    },
+    {
+      retries: 3,
+      onRetry(e, attempt) {
+        logger.info('Retrying');
+        logger.error(e?.message ?? 'UNKNOWN_ERR');
+        logger.error(`Retrying... Attempt ${attempt}`);
+      },
+    },
+  );
+
+  if (!!args.callbackUrl && !!args.guid && !!candyMachinePubkey) {
+    logger.info(`Sending post request to Callback URL: ${args.callbackUrl}`);
+    const callbackResult = await Axios.post(args.callbackUrl, {
+      candyMachineId: candyMachinePubkey.toBase58(),
+      creator: walletKeyPair.publicKey.toBase58(),
+      guid: args.guid,
+    });
+    logger.info('Callback Result Status:', callbackResult.status);
+  }
+
+  logger.info('Exiting runUploadV2UsingHiddenSettings');
+};
 
 const runUploadV2 = async (
   logger: winston.Logger,
@@ -58,17 +319,14 @@ const runUploadV2 = async (
     env,
     keyPair,
   } = args;
+
   logger.log('info', 'Before start...');
   const collectionMint = new web3.PublicKey(collectionMintParam);
   await retry(
     async (bail) => {
       try {
         logger.info('Starting...');
-        const bytes = bs58.decode(keyPair);
-        const walletKeyPair = web3.Keypair.fromSecretKey(
-          Uint8Array.from(bytes),
-        );
-
+        const walletKeyPair = keypairFromBase58String(keyPair);
         const anchorProgram = await loadCandyProgramV2(walletKeyPair, env, rpc);
 
         const {
@@ -164,24 +422,8 @@ const runUploadV2 = async (
         let animationFileCount = 0;
         let jsonFileCount = 0;
 
-        // check if dir exists
-        const dirExists = await fs
-          .stat(`${storageDir}/${processId}`)
-          .then(() => true)
-          .catch(() => false);
-        const zipFilesDir = `${storageDir}/${processId}/files`;
-        const zipFile = `${storageDir}/${processId}/files.zip`;
-
-        if (!dirExists) {
-          logger.info('Unzipping');
-          await mkdirp(`${storageDir}/${processId}/files`);
-          await download(filesZipUrl, zipFile);
-          // await unzip(zipFile, zipFilesDir);
-          await exec('/usr/bin/7z x ' + zipFile + ` -y -o${zipFilesDir}`)
-        } else {
-          logger.info('Directory already exists');
-        }
-
+        logger.info('Now Downloading Zip: ', filesZipUrl);
+        const zipFilesDir = await downloadZip(filesZipUrl, processId);
         let files = await fs.readdir(zipFilesDir);
         files = files.map((file) => path.join(zipFilesDir, file));
 
@@ -190,6 +432,7 @@ const runUploadV2 = async (
           'image/gif': 1,
           'image/jpeg': 1,
         };
+
         const supportedAnimationTypes = {
           'video/mp4': 1,
           'video/quicktime': 1,
@@ -319,6 +562,9 @@ export const CandyMachineUploadResult = objectType({
     t.nonNull.string('processId', {
       description: 'Process id handle',
     });
+    t.nonNull.string('candyMachineAddress', {
+      description: 'the address that will be used to create the candy machine',
+    });
   },
 });
 
@@ -330,11 +576,9 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         description: 'Wallet keypair',
       }),
     ),
-    callbackUrl: nonNull(
-      stringArg({
-        description: 'Candy Machine Creation callback URL',
-      }),
-    ),
+    callbackUrl: stringArg({
+      description: 'Candy Machine Creation callback URL',
+    }),
     config: nonNull(
       arg({
         type: 'JSON',
@@ -369,6 +613,19 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
         description: 'Solana env, either mainnet-beta | devnet | testnet',
       }),
     ),
+    useHiddenSettings: nonNull(
+      booleanArg({
+        default: false,
+        description:
+          'if set to true, the candy machine config will be modified to use hidden settings',
+      }),
+    ),
+    executeSync: nonNull(
+      booleanArg({
+        default: false,
+        description: 'if set to true, the upload will execute synchronously',
+      }),
+    ),
   },
   async resolve(_, args, _ctx: YogaInitialContext) {
     const processId = uuidv4();
@@ -398,24 +655,60 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
       await fs.mkdir(CACHE_PATH);
     }
 
-    runUploadV2(logger, processId, args)
-      .catch((err) => {
-        logger.error('Aborting due to error');
-        logger.error(err);
-      })
-      .finally(async () => {
-        logger.info('Cleaning up');
-        await new Promise<void>((resolve, reject) => {
-          rimraf(`${storageDir}/${processId}`, (err) => {
-            if (err) {
-              reject(err);
-            }
-            resolve();
-          });
+    const processTmpStorageDir = path.resolve(
+      process.env.TMP_STORAGE_DIR,
+      processId,
+    );
+
+    const removeStorageDir = async () => {
+      logger.info('cleaning up temp storage');
+      await new Promise<void>((resolve, reject) => {
+        rimraf(processTmpStorageDir, (err) => {
+          if (err) {
+            reject(err);
+          }
+          resolve();
         });
       });
+    };
 
-    return { processId };
+    //
+    const candyMachineKeypair = Keypair.generate();
+    if (args.useHiddenSettings) {
+      const uploadPromise = runUploadV2UsingHiddenSettings(logger, processId, {
+        ...args,
+        candyMachineKeypair: candyMachineKeypair,
+      })
+        .catch((err) => {
+          logger.error('Aborting runUploadV2UsingHiddenSettings due to error');
+          logger.error(err);
+        })
+        .finally(async () => {
+          removeStorageDir();
+        });
+
+      if (args.executeSync) {
+        logger.info('Waiting for runUploadV2UsingHiddenSettings');
+        await uploadPromise;
+      }
+    } else {
+      const uploadPromise = runUploadV2(logger, processId, args)
+        .catch((err) => {
+          logger.error('Aborting runUploadV2 due to error');
+          logger.error(err);
+        })
+        .finally(async () => {
+          removeStorageDir();
+        });
+
+      if (args.executeSync) {
+        logger.info('Waiting for runUploadV2');
+        await uploadPromise;
+      }
+    }
+
+    const candyMachineAddress = candyMachineKeypair.publicKey.toBase58();
+    return { processId, candyMachineAddress };
   },
 });
 
