@@ -125,7 +125,7 @@ const runUploadV2UsingHiddenSettings = async (
 
   // setup connection and metaplex client
   const walletKeyPair = keypairFromBase58String(keyPair);
-  const connection = new Connection(rpc);
+  const connection = new Connection(rpc, {confirmTransactionInitialTimeout: 2 * 60 * 1000});
   const metaplex = new Metaplex(connection);
   metaplex.use(keypairIdentity(walletKeyPair));
 
@@ -263,7 +263,8 @@ const runUploadV2UsingHiddenSettings = async (
         // Wait for the transaction to finalize before we call the callback
         const confirmationResponse = await connection.confirmTransaction(
           response.signature,
-          'finalized',
+          'confirmed',
+
         );
 
         logger.info('Confirmation: ', confirmationResponse);
