@@ -147,10 +147,12 @@ type Mutation {
     """solana cluster name (i.e. devnet, mainnet-beta, testnet)"""
     cluster: String!
 
-    """new NFT metadata json"""
+    """new NFT metadata json. Must provide either a newUri or newMetadtaJson."""
     newMetadataJson: NftMetadata
 
-    """The nft will be updated with this metadata url"""
+    """
+    The nft will be updated with this metadata url. Must provide either a newUri or newMetadtaJson.
+    """
     newUri: String
 
     """mint key for the NFT to update (base58 encoded string)"""
