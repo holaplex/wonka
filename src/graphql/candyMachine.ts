@@ -123,7 +123,7 @@ const runUploadV2UsingHiddenSettings = async (
   // setup connection and metaplex client
   const walletKeyPair = keypairFromBase58String(keyPair);
   const connection = new Connection(rpc, {
-    confirmTransactionInitialTimeout: 2 * 60 * 1000,
+    confirmTransactionInitialTimeout: 5 * 60 * 1000,
   });
   const metaplex = new Metaplex(connection);
   metaplex.use(keypairIdentity(walletKeyPair));
