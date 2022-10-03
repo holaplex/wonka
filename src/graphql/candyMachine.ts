@@ -125,7 +125,9 @@ const runUploadV2UsingHiddenSettings = async (
 
   // setup connection and metaplex client
   const walletKeyPair = keypairFromBase58String(keyPair);
-  const connection = new Connection(rpc, {confirmTransactionInitialTimeout: 2 * 60 * 1000});
+  const connection = new Connection(rpc, {
+    confirmTransactionInitialTimeout: 2 * 60 * 1000,
+  });
   const metaplex = new Metaplex(connection);
   metaplex.use(keypairIdentity(walletKeyPair));
 
@@ -246,42 +248,19 @@ const runUploadV2UsingHiddenSettings = async (
   delete config['splTokenAccount'];
 
   let candyMachinePubkey: PublicKey | null = null;
-  const result = await retry(
-    async (bail) => {
-      try {
-        logger.info('Creating Candy Machine');
-        const { response, candyMachine } = await metaplex
-          .candyMachines()
-          .create(config)
-          .run();
-        logger.info(
-          'Created Candy Machine: ' + candyMachine.address.toBase58(),
-        );
-        candyMachinePubkey = candyMachine.address;
 
-        logger.info('waiting for tx to finalize: ', response.signature);
-        // Wait for the transaction to finalize before we call the callback
-        const confirmationResponse = await connection.confirmTransaction(
-          response.signature,
-          'confirmed',
-
-        );
-
-        logger.info('Confirmation: ', confirmationResponse);
-      } catch (err) {
-        logger.error('Errored out', err);
-        throw err;
-      }
-    },
-    {
-      retries: 3,
-      onRetry(e, attempt) {
-        logger.info('Retrying');
-        logger.error(e?.message ?? 'UNKNOWN_ERR');
-        logger.error(`Retrying... Attempt ${attempt}`);
-      },
-    },
-  );
+  try {
+    logger.info('Creating Candy Machine');
+    const { response, candyMachine } = await metaplex
+      .candyMachines()
+      .create(config)
+      .run();
+    logger.info('Created Candy Machine: ' + candyMachine.address.toBase58());
+    candyMachinePubkey = candyMachine.address;
+  } catch (err) {
+    logger.error('Errored out', err);
+    throw err;
+  }
 
   if (!!args.callbackUrl && !!args.guid && !!candyMachinePubkey) {
     logger.info(`Sending post request to Callback URL: ${args.callbackUrl}`);
@@ -547,7 +526,7 @@ const runUploadV2 = async (
     },
     {
       retries: 3,
-      onRetry(e, attempt) {
+      onRetry (e, attempt) {
         logger.info('Retrying');
         logger.error(e?.message ?? 'UNKNOWN_ERR');
         logger.error(`Retrying... Attempt ${attempt}`);
@@ -559,7 +538,7 @@ const runUploadV2 = async (
 export const CandyMachineUploadResult = objectType({
   name: 'CandyMachineUploadResult',
   description: 'Result from calling candy machine upload',
-  definition(t) {
+  definition (t) {
     t.nonNull.string('processId', {
       description: 'Process id handle',
     });
@@ -628,7 +607,7 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
       }),
     ),
   },
-  async resolve(_, args, _ctx: YogaInitialContext) {
+  async resolve (_, args, _ctx: YogaInitialContext) {
     const processId = uuidv4();
     const logger = winston.createLogger({
       level: 'info',
@@ -716,7 +695,7 @@ export const CandyMachineUploadMutation = mutationField('candyMachineUpload', {
 export const CandyMachineUploadLogsResult = objectType({
   name: 'CandyMachineUploadLogsResult',
   description: 'Result from calling candy machine upload logs',
-  definition(t) {
+  definition (t) {
     t.nonNull.string('processId', {
       description: 'Process id handle',
     });
@@ -738,7 +717,7 @@ export const CandyMachineUploadLogsQuery = queryField(
         }),
       ),
     },
-    async resolve(_, args, _ctx: YogaInitialContext) {
+    async resolve (_, args, _ctx: YogaInitialContext) {
       const { processId } = args;
       if (!isUuid(processId)) {
         throw new Error('Invalid processId');
