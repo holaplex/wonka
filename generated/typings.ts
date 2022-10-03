@@ -82,6 +82,10 @@ export interface NexusGenScalars {
 }
 
 export interface NexusGenObjects {
+  CandyMachineUploadCacheResult: { // root type
+    cache: NexusGenScalars['JSON']; // JSON!
+    processId: string; // String!
+  }
   CandyMachineUploadLogsResult: { // root type
     logs: NexusGenScalars['JSON']; // JSON!
     processId: string; // String!
@@ -130,6 +134,10 @@ export type NexusGenRootTypes = NexusGenObjects
 export type NexusGenAllTypes = NexusGenRootTypes & NexusGenScalars
 
 export interface NexusGenFieldTypes {
+  CandyMachineUploadCacheResult: { // field return type
+    cache: NexusGenScalars['JSON']; // JSON!
+    processId: string; // String!
+  }
   CandyMachineUploadLogsResult: { // field return type
     logs: NexusGenScalars['JSON']; // JSON!
     processId: string; // String!
@@ -162,6 +170,7 @@ export interface NexusGenFieldTypes {
     updateNft: NexusGenRootTypes['UpdateNftResult'] | null; // UpdateNftResult
   }
   Query: { // field return type
+    candyMachineUploadCache: NexusGenRootTypes['CandyMachineUploadCacheResult'] | null; // CandyMachineUploadCacheResult
     candyMachineUploadLogs: NexusGenRootTypes['CandyMachineUploadLogsResult'] | null; // CandyMachineUploadLogsResult
   }
   SplFanout: { // field return type
@@ -177,6 +186,10 @@ export interface NexusGenFieldTypes {
 }
 
 export interface NexusGenFieldTypeNames {
+  CandyMachineUploadCacheResult: { // field return type name
+    cache: 'JSON'
+    processId: 'String'
+  }
   CandyMachineUploadLogsResult: { // field return type name
     logs: 'JSON'
     processId: 'String'
@@ -209,6 +222,7 @@ export interface NexusGenFieldTypeNames {
     updateNft: 'UpdateNftResult'
   }
   Query: { // field return type name
+    candyMachineUploadCache: 'CandyMachineUploadCacheResult'
     candyMachineUploadLogs: 'CandyMachineUploadLogsResult'
   }
   SplFanout: { // field return type name
@@ -268,6 +282,10 @@ export interface NexusGenArgTypes {
     }
   }
   Query: {
+    candyMachineUploadCache: { // args
+      env: string; // String!
+      processId: string; // String!
+    }
     candyMachineUploadLogs: { // args
       processId: string; // String!
     }

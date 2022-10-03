@@ -2,6 +2,15 @@
 ### Do not make changes to this file directly
 
 
+"""Gets a candy machine cache file."""
+type CandyMachineUploadCacheResult {
+  """The file contents"""
+  cache: JSON!
+
+  """Process id handle"""
+  processId: String!
+}
+
 """Result from calling candy machine upload logs"""
 type CandyMachineUploadLogsResult {
   logs: JSON!
@@ -235,6 +244,15 @@ input NftProperties {
 }
 
 type Query {
+  """Gets a candy machine cache file."""
+  candyMachineUploadCache(
+    """Solana env, either mainnet-beta | devnet | testnet"""
+    env: String!
+
+    """Process id handle"""
+    processId: String!
+  ): CandyMachineUploadCacheResult
+
   """Get logs for a candy machine upload process"""
   candyMachineUploadLogs(
     """Process id handle"""
