@@ -64,7 +64,7 @@ const downloadZip = async (
   if (!dirExists) {
     await mkdirp(processDir);
     await download(zipUrl, zipFile);
-    await exec('/usr/bin/7z x ' + zipFile + ` -y -o${zipFilesDir}`);
+    await exec('7z x ' + zipFile + ` -y -o${zipFilesDir}`);
   } else {
     throw Error('zip dir already exists');
   }
@@ -150,7 +150,14 @@ const runUploadV2UsingHiddenSettings = async (
 
   // First we need to upload the necessary NFT files from the zip
   logger.info('Downloading Zip: ', filesZipUrl);
-  const zipFilesDir = await downloadZip(filesZipUrl, processId);
+  let zipFilesDir: string
+  try {  
+    zipFilesDir = await downloadZip(filesZipUrl, processId);
+  } catch(err) {
+    logger.error(`Error downloading file zip`, err);
+    throw err
+  }
+  logger.info('Extracted zip to directory: ', zipFilesDir);
   const templateNftPath = path.join(zipFilesDir, NFT_METADATA_FILENAME);
   const templateNftMetadataStr = await fs.readFile(templateNftPath, 'utf-8');
   let templateNftMetadata = JSON.parse(templateNftMetadataStr);
@@ -170,7 +177,19 @@ const runUploadV2UsingHiddenSettings = async (
       contentType: contentType,
       extension: fileName.split('.')[-1],
     });
-    const uploadedFileUri = await storageDriver.upload(metaplexFile);
+
+    logger.info(`Uploading file: ${metaplexFile.fileName}`)
+
+    let uploadedFileUri: string
+    try {
+      uploadedFileUri = await storageDriver.upload(metaplexFile);
+      
+      logger.info(`File uploaded: ${uploadedFileUri}`)
+    } catch(err) {
+      logger.error(`upload file failure: ${err}`)
+      throw err
+    }
+
 
     // update the nft metadata with uploaded uri
     nftFile['uri'] = uploadedFileUri;
@@ -252,7 +271,7 @@ const runUploadV2UsingHiddenSettings = async (
       .create({
         ...config,
         confirmOptions: {
-          commitment: 'confirmed',
+          commitment: 'finalized',
           maxRetries: 3,
         },
       })

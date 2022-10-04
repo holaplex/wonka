@@ -3513,10 +3513,10 @@
     multiformats "^9.7.0"
     nft.storage "^6.4.1"
 
-"@metaplex-foundation/js@*", "@metaplex-foundation/js@^0.15.0":
-  version "0.15.0"
-  resolved "https://registry.yarnpkg.com/@metaplex-foundation/js/-/js-0.15.0.tgz#0e0165695d101382e377e6b55972b6119db2b8fa"
-  integrity sha512-i+S4Z8fb9HIC+Yyx8Kaeau7jKFv8qIOE5pLsdQx4eGkqrQyxVynRyzP6EMsitkGJ11pHUYvrcmRmTvMYYV8pfQ==
+"@metaplex-foundation/js@*", "@metaplex-foundation/js@^0.16.1":
+  version "0.16.1"
+  resolved "https://registry.yarnpkg.com/@metaplex-foundation/js/-/js-0.16.1.tgz#02bec9357c48ca1d07c941534ce38c369a9bb301"
+  integrity sha512-gwmTu6+OE7M1fJMDDcBsgje5YpcZyt/wTjXjnhjna73+2fvqbyjWLa+KYeYF7mneFY7Y+gISq20YwONiYwz/0A==
   dependencies:
     "@bundlr-network/client" "^0.7.14"
     "@metaplex-foundation/beet" "^0.4.0"
@@ -9311,9 +9311,9 @@ multiformats@^9.0.4, multiformats@^9.4.1, multiformats@^9.4.13, multiformats@^9.
   integrity sha512-vMwf/FUO+qAPvl3vlSZEgEVFY/AxeZq5yg761ScF3CZsXgmTi/HGkicUiNN0CI4PW8FiY2P0OLklOcmQjdQJhw==
 
 multiformats@^9.6.4, multiformats@^9.7.0:
-  version "9.8.1"
-  resolved "https://registry.yarnpkg.com/multiformats/-/multiformats-9.8.1.tgz#0e5f2910cf0c34f55adf0602f920775f9622552a"
-  integrity sha512-Cu7NfUYtCV+WN7w59WsRRF138S+um4tTo11ScYsWbNgWyCEGOu8wID1e5eMJs91gFZ0I7afodkkdxCF8NGkqZQ==
+  version "9.9.0"
+  resolved "https://registry.yarnpkg.com/multiformats/-/multiformats-9.9.0.tgz#c68354e7d21037a8f1f8833c8ccd68618e8f1d37"
+  integrity sha512-HoMUjhH9T8DDBNT+6xzkrd9ga/XiBI4xLr58LJACwK6G3HTOPeMz4nB4KJs33L2BelrIJa7P0VuNaVF3hMYfjg==
 
 multistream@^4.1.0:
   version "4.1.0"
