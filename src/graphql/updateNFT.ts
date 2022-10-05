@@ -57,11 +57,11 @@ export const UpdateNft = mutationField('updateNft', {
       }),
     ),
     newUri: stringArg({
-      description: 'The nft will be updated with this metadata url',
+      description: 'The nft will be updated with this metadata url. Must provide either a newUri or newMetadtaJson.',
     }),
     newMetadataJson: arg({
       type: 'NftMetadata',
-      description: 'new NFT metadata json',
+      description: 'new NFT metadata json. Must provide either a newUri or newMetadtaJson.',
     }),
     cluster: nonNull(
       stringArg({
@@ -90,7 +90,7 @@ export const UpdateNft = mutationField('updateNft', {
       };
     };
 
-    if (!args.newUri && !args.newMetadataJson) {
+    if ((!args.newUri && !args.newMetadataJson) || (args.newUri && args.newMetadataJson)) {
       return fail('Failure: must provide either a newUri or newMetadtaJson');
     }
 

@@ -33,10 +33,7 @@ import {
   toMetaplexFile,
   sol,
   token,
-  Currency,
-  Amount,
   SplTokenAmount,
-  formatAmount,
 } from '@metaplex-foundation/js';
 import { nftStorage } from '@metaplex-foundation/js-plugin-nft-storage';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
@@ -67,7 +64,7 @@ const downloadZip = async (
   if (!dirExists) {
     await mkdirp(processDir);
     await download(zipUrl, zipFile);
-    await exec('/usr/bin/7z x ' + zipFile + ` -y -o${zipFilesDir}`);
+    await exec('7z x ' + zipFile + ` -y -o${zipFilesDir}`);
   } else {
     throw Error('zip dir already exists');
   }
@@ -125,7 +122,9 @@ const runUploadV2UsingHiddenSettings = async (
 
   // setup connection and metaplex client
   const walletKeyPair = keypairFromBase58String(keyPair);
-  const connection = new Connection(rpc);
+  const connection = new Connection(rpc, {
+    confirmTransactionInitialTimeout: 5 * 60 * 1000,
+  });
   const metaplex = new Metaplex(connection);
   metaplex.use(keypairIdentity(walletKeyPair));
 
@@ -151,7 +150,14 @@ const runUploadV2UsingHiddenSettings = async (
 
   // First we need to upload the necessary NFT files from the zip
   logger.info('Downloading Zip: ', filesZipUrl);
-  const zipFilesDir = await downloadZip(filesZipUrl, processId);
+  let zipFilesDir: string
+  try {  
+    zipFilesDir = await downloadZip(filesZipUrl, processId);
+  } catch(err) {
+    logger.error(`Error downloading file zip`, err);
+    throw err
+  }
+  logger.info('Extracted zip to directory: ', zipFilesDir);
   const templateNftPath = path.join(zipFilesDir, NFT_METADATA_FILENAME);
   const templateNftMetadataStr = await fs.readFile(templateNftPath, 'utf-8');
   let templateNftMetadata = JSON.parse(templateNftMetadataStr);
@@ -171,7 +177,19 @@ const runUploadV2UsingHiddenSettings = async (
       contentType: contentType,
       extension: fileName.split('.')[-1],
     });
-    const uploadedFileUri = await storageDriver.upload(metaplexFile);
+
+    logger.info(`Uploading file: ${metaplexFile.fileName}`)
+
+    let uploadedFileUri: string
+    try {
+      uploadedFileUri = await storageDriver.upload(metaplexFile);
+      
+      logger.info(`File uploaded: ${uploadedFileUri}`)
+    } catch(err) {
+      logger.error(`upload file failure: ${err}`)
+      throw err
+    }
+
 
     // update the nft metadata with uploaded uri
     nftFile['uri'] = uploadedFileUri;
@@ -246,41 +264,24 @@ const runUploadV2UsingHiddenSettings = async (
   delete config['splTokenAccount'];
 
   let candyMachinePubkey: PublicKey | null = null;
-  const result = await retry(
-    async (bail) => {
-      try {
-        logger.info('Creating Candy Machine');
-        const { response, candyMachine } = await metaplex
-          .candyMachines()
-          .create(config)
-          .run();
-        logger.info(
-          'Created Candy Machine: ' + candyMachine.address.toBase58(),
-        );
-        candyMachinePubkey = candyMachine.address;
-
-        logger.info('waiting for tx to finalize: ', response.signature);
-        // Wait for the transaction to finalize before we call the callback
-        const confirmationResponse = await connection.confirmTransaction(
-          response.signature,
-          'finalized',
-        );
-
-        logger.info('Confirmation: ', confirmationResponse);
-      } catch (err) {
-        logger.error('Errored out', err);
-        throw err;
-      }
-    },
-    {
-      retries: 3,
-      onRetry(e, attempt) {
-        logger.info('Retrying');
-        logger.error(e?.message ?? 'UNKNOWN_ERR');
-        logger.error(`Retrying... Attempt ${attempt}`);
-      },
-    },
-  );
+  try {
+    logger.info('Creating Candy Machine');
+    const { candyMachine } = await metaplex
+      .candyMachines()
+      .create({
+        ...config,
+        confirmOptions: {
+          commitment: 'finalized',
+          maxRetries: 3,
+        },
+      })
+      .run();
+    logger.info('Created Candy Machine: ' + candyMachine.address.toBase58());
+    candyMachinePubkey = candyMachine.address;
+  } catch (err) {
+    logger.error('Errored out', err);
+    throw err;
+  }
 
   if (!!args.callbackUrl && !!args.guid && !!candyMachinePubkey) {
     logger.info(`Sending post request to Callback URL: ${args.callbackUrl}`);
