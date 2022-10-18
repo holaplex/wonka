@@ -24,7 +24,7 @@
     "@metaplex-foundation/js-plugin-nft-storage": "^0.1.1",
     "@metaplex/arweave-cost": "^1.0.4",
     "@nftstorage/metaplex-auth": "^1.2.0",
-    "@project-serum/anchor": "^0.23.0",
+    "@project-serum/anchor": "^0.17.0",
     "@solana/spl-token": "^0.1.8",
     "@solana/web3.js": "^1.61.0",
     "@strata-foundation/spl-utils": "^3.10.0",
