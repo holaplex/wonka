@@ -215,6 +215,7 @@ export const MintNft = mutationField('mintNft', {
     }
 
     let create_input_data: CreateNftInput = uri;
+    create_input_data.isMutable = true;
 
     if (mintToPubkey) {
       // if mintTo arg is provided, we want the NFT owner to be that address instead of being owned by the mint.
