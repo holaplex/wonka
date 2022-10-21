@@ -8,7 +8,6 @@ import {
   scalarType,
 } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
-import { web3 } from '@project-serum/anchor';
 
 import {
   Metaplex,
