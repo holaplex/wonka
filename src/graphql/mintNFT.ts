@@ -156,6 +156,9 @@ export const MintNft = mutationField('mintNft', {
     mintToAddress: arg({
       type: 'String',
     }),
+    isMutable: arg({
+      type: 'boolean'
+    })
   },
   async resolve(_, args, ctx: YogaInitialContext) {
     const connection = new Connection(process.env.RPC_ENDPOINT);
@@ -215,6 +218,7 @@ export const MintNft = mutationField('mintNft', {
     }
 
     let create_input_data: CreateNftInput = uri;
+    create_input_data.isMutable = args.isMutable ?? true;
 
     if (mintToPubkey) {
       // if mintTo arg is provided, we want the NFT owner to be that address instead of being owned by the mint.
