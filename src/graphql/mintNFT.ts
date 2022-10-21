@@ -157,7 +157,7 @@ export const MintNft = mutationField('mintNft', {
       type: 'String',
     }),
     isMutable: arg({
-      type: 'boolean'
+      type: 'Boolean'
     })
   },
   async resolve(_, args, ctx: YogaInitialContext) {
@@ -180,7 +180,6 @@ export const MintNft = mutationField('mintNft', {
     }
 
     const bytes = base58.decode(args.keyPair);
-    const walletKeyPair = web3.Keypair.fromSecretKey(Uint8Array.from(bytes));
 
     // Get create wallet from the client secrets
     try {
