@@ -4,7 +4,6 @@ import { LOCALHOST } from '@metaplex-foundation/amman';
 import {
   Amman,
   ammanMockStorage,
-  AmmanMockStorageDriver,
 } from '@metaplex-foundation/amman-client';
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -18,16 +17,12 @@ import {
   toMetaplexFile,
   Nft,
   token,
-  findAssociatedTokenAccountPda,
-  SplTokenAmount,
-  formatAmount,
+  SplTokenAmount
 } from '@metaplex-foundation/js';
 
 import { makeServer } from '../src/makeServer';
 import { GraphQLClient, gql } from 'graphql-request';
 import base58 from 'bs58';
-import { Fanout, FanoutClient } from '@glasseaters/hydra-sdk';
-import { BN, Wallet } from '@project-serum/anchor';
 
 const makeTestClient = (): GraphQLClient => {
   return new GraphQLClient('http://0.0.0.0:4000/graphql');
@@ -54,7 +49,12 @@ const createTokenAssociatedTokenAccountIfNeeded = async (
   payer: Keypair,
   owner = payer.publicKey,
 ): Promise<PublicKey> => {
-  const ataAddress = findAssociatedTokenAccountPda(tokenMint, owner);
+  const ataAddress: PublicKey = await Token.getAssociatedTokenAddress(
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+    TOKEN_PROGRAM_ID,
+    tokenMint,
+    owner
+  );
   const createTokenIx = Token.createAssociatedTokenAccountInstruction(
     ASSOCIATED_TOKEN_PROGRAM_ID,
     TOKEN_PROGRAM_ID,
@@ -88,13 +88,13 @@ const createToken = async (
       mint: tokenMint,
       mintAuthority: tokenMintAuthority,
       freezeAuthority: tokenMintAuthority.publicKey,
-      owner: owner.publicKey,
-      payer: payer,
+      owner: owner.publicKey
+    }, {
       confirmOptions: {
         commitment: 'finalized',
       },
+      payer: payer
     })
-    .run();
 
   // maybe create metadata account as well here?
 
@@ -118,10 +118,12 @@ const mintTokens = async (
       amount: amount,
       toOwner: mintTokensTo,
       mintAuthority: tokenAuthority,
+    }, {
       payer: payer,
-      confirmOptions: { commitment: 'finalized' },
-    })
-    .run();
+      confirmOptions: {
+        commitment: 'finalized'
+      }
+    });
 
   // const balance = await connection.getTokenAccountBalance()
   console.log(
@@ -184,8 +186,7 @@ const createCollectionNft = async (
       symbol: 'SCC',
       sellerFeeBasisPoints: 0,
       updateAuthority: collectionOwnerKeypair,
-    })
-    .run();
+    });
 
   const mintLabelResult = await amman.addr.addLabel(
     'super-cool-collection-mint',
@@ -351,9 +352,11 @@ const main = async () => {
     token(1, 6),
   );
 
-  const richPersonTokenAcct = findAssociatedTokenAccountPda(
-    tokenMintPubkey,
-    richPersonPubkey,
+  const richPersonTokenAcct: PublicKey = await Token.getAssociatedTokenAddress(
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+    TOKEN_PROGRAM_ID,
+    tokenMintAddress,
+    richPersonPubkey
   );
 
   console.log('Rich Person Token Acct: ', richPersonTokenAcct.toBase58());
@@ -377,18 +380,13 @@ const main = async () => {
       .candyMachines()
       .findByAddress({
         address: new PublicKey(candyAddress),
-        commitment: 'confirmed',
-      })
-      .run();
+      }, {commitment: 'confirmed'});
 
     console.log(candyMachine);
 
     console.log('Candy Info');
-    console.log('Go Live: ', candyMachine.goLiveDate.toNumber());
-    console.log('Price: ', formatAmount(candyMachine.price));
     console.log('Items Available: ', candyMachine.itemsAvailable.toNumber());
     console.log('Items Remaining: ', candyMachine.itemsRemaining.toNumber());
-    console.log('Items Loaded: ', candyMachine.itemsLoaded.toNumber());
     console.log('Items Minted', candyMachine.itemsMinted.toNumber());
 
     const richPersonBalance = await connection.getTokenAccountBalance(
@@ -400,16 +398,18 @@ const main = async () => {
     console.log('minting an NFT');
     const mintedNft = await metaplex
       .candyMachines()
-      .mint({
-        candyMachine,
-        payer: richPersonKeypair,
-        payerToken: richPersonTokenAcct,
-        confirmOptions: {
-          skipPreflight: true,
-          commitment: 'finalized',
+      .mint(
+        {
+          candyMachine: candyMachine,
+          collectionUpdateAuthority: richPersonPubkey,
         },
-      })
-      .run();
+        {
+          confirmOptions: {
+            skipPreflight: true,
+            commitment: 'finalized'
+          }
+        }
+      );
 
     // TODO(will): this runs reportedly runs into a bot tax
     // unclear why (and will fail without `skipPreflight`)

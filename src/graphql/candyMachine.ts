@@ -8,7 +8,7 @@ import {
   queryField,
 } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
-import { BN, web3 } from '@project-serum/anchor';
+import { web3 } from '@project-serum/anchor';
 import { uuid as uuidv4, isUuid } from 'uuidv4';
 import path from 'path';
 import fs from 'fs/promises';
@@ -16,7 +16,7 @@ import { getType } from 'mime';
 import winston from 'winston';
 import rimraf from 'rimraf';
 import { uploadV2 } from '../../cli/commands/upload-logged';
-import { getTokenMint, loadCandyProgramV2 } from '../../cli/helpers/accounts';
+import { loadCandyProgramV2 } from '../../cli/helpers/accounts';
 import {
   getCandyMachineV2ConfigFromPayload,
   parseCollectionMintPubkey,
@@ -151,7 +151,7 @@ const runUploadV2UsingHiddenSettings = async (
   // First we need to upload the necessary NFT files from the zip
   logger.info('Downloading Zip: ', filesZipUrl);
   let zipFilesDir: string
-  try {  
+  try {
     zipFilesDir = await downloadZip(filesZipUrl, processId);
   } catch(err) {
     logger.error(`Error downloading file zip`, err);
@@ -183,7 +183,7 @@ const runUploadV2UsingHiddenSettings = async (
     let uploadedFileUri: string
     try {
       uploadedFileUri = await storageDriver.upload(metaplexFile);
-      
+
       logger.info(`File uploaded: ${uploadedFileUri}`)
     } catch(err) {
       logger.error(`upload file failure: ${err}`)
@@ -274,8 +274,7 @@ const runUploadV2UsingHiddenSettings = async (
           commitment: 'finalized',
           maxRetries: 3,
         },
-      })
-      .run();
+      });
     logger.info('Created Candy Machine: ' + candyMachine.address.toBase58());
     candyMachinePubkey = candyMachine.address;
   } catch (err) {

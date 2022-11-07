@@ -9,16 +9,9 @@ import {
 } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
 
-import {
-  Metaplex,
-  keypairIdentity,
-  UploadMetadataOutput,
-  Nft,
-  CreateNftOutput,
-  CreateNftInput,
-} from '@metaplex-foundation/js-next';
-import { Connection, clusterApiUrl, Keypair, PublicKey } from '@solana/web3.js';
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import base58 from 'bs58';
+import { UploadMetadataOutput, Nft, CreateNftOutput, Metaplex, keypairIdentity, CreateNftInput } from '@metaplex-foundation/js';
 
 export const MintNftResult = objectType({
   name: 'MintNftResult',
@@ -162,12 +155,12 @@ export const MintNft = mutationField('mintNft', {
   async resolve(_, args, ctx: YogaInitialContext) {
     const connection = new Connection(process.env.RPC_ENDPOINT);
     let uri: UploadMetadataOutput = null!;
-    let nft: {
+    let nft: ({
       nft: Nft;
-    } & CreateNftOutput = null!;
-    let wallet: Keypair = null!;
+    } & CreateNftOutput) | null = null;
+    let wallet: Keypair | null = null;
 
-    let mintToPubkey: PublicKey = null;
+    let mintToPubkey: PublicKey | null = null;
     try {
       if (args.mintToAddress) {
         mintToPubkey = new PublicKey(args.mintToAddress!);
@@ -215,26 +208,32 @@ export const MintNft = mutationField('mintNft', {
       };
     }
 
-    let create_input_data: CreateNftInput = uri;
-    create_input_data.isMutable = args.isMutable ?? true;
+    const uploadMetadataOutput: UploadMetadataOutput = uri;
+    const createNftInput: CreateNftInput = {
+        ...uploadMetadataOutput.metadata,
+        uri: uploadMetadataOutput.uri,
+        sellerFeeBasisPoints: nft.nft.sellerFeeBasisPoints,
+        name: nft.nft.name,
+        collection: nft.nft.collection.address,
+        isMutable: args.isMutable ?? true,
+    }
 
     if (mintToPubkey) {
       // if mintTo arg is provided, we want the NFT owner to be that address instead of being owned by the mint.
-      create_input_data.owner = mintToPubkey;
+      createNftInput.tokenOwner = mintToPubkey
     }
 
     // Create New NFT with the metadata
     try {
-      nft = await metaplex.nfts().create(create_input_data);
+      nft = await metaplex.nfts().create(createNftInput);
+
     } catch (e) {
-      return {
-        message: `Error creating NFT: ${e.message}`,
-      };
+      return fail(`Error creating NFT: ${e.message}`)
     }
 
     // Return the NFT mint address
     return {
-      message: nft.mint.publicKey.toBase58(),
+      message: nft.nft.mint.address.toBase58(),
     };
   },
 });
