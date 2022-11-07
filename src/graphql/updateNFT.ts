@@ -1,23 +1,15 @@
 import { nonNull, mutationField, objectType, stringArg, arg } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
-import {
-  Metaplex,
-  keypairIdentity,
-  bundlrStorage,
-  BundlrOptions,
-} from '@metaplex-foundation/js-next';
 import { getProcessLogger } from './utils';
-import { NftMetadata } from './mintNFT';
 
 import {
   Connection,
-  clusterApiUrl,
   Keypair,
   PublicKey,
-  Cluster,
 } from '@solana/web3.js';
 
 import base58 from 'bs58';
+import { BundlrOptions, bundlrStorage, keypairIdentity, Metaplex, OperationOptions, UpdateNftInput, UpdateNftOutput } from '@metaplex-foundation/js';
 
 export const UpdateNftResult = objectType({
   name: 'UpdateNftResult',
@@ -109,7 +101,7 @@ export const UpdateNft = mutationField('updateNft', {
       metaplex.use(keypairIdentity(payerKeypair));
 
       const nftMintIdPubkey = new PublicKey(args.nftMintId);
-      const nft = await metaplex.nfts().findByMint(nftMintIdPubkey);
+      const nft = await metaplex.nfts().findByMint({ mintAddress: nftMintIdPubkey });
 
       if (nft.uri === args.newUri) {
         return { message: 'URI already up to date' };
@@ -132,19 +124,21 @@ export const UpdateNft = mutationField('updateNft', {
         newUri = myNewUri;
       }
 
-      const { nft: updatedNft } = await metaplex.nfts().update(nft, {
-        uri: newUri,
+      const updateNftInput: UpdateNftInput = {
+        nftOrSft: nft,
         updateAuthority: updateAuthorityKeypair,
-      });
+        uri: newUri
+      }
+      await metaplex.nfts().update(updateNftInput);
 
       logger.info(
         'update complete for ' +
-          updatedNft.mint.toBase58() +
+          nft.mint.address.toBase58() +
           ' uri: ' +
-          updatedNft.uri,
+          nft.uri,
       );
 
-      if (updatedNft.uri === newUri) {
+      if (nft.uri === newUri) {
         return success('Updated nft', newUri);
       } else {
         return fail('updated nft did not have newUri', newUri);
