@@ -314,7 +314,7 @@ const uploadCandyMachine = async (
 };
 
 const main = async () => {
-  const server = makeServer(4000, true, console);
+  const server = makeServer({port: 4000, isDev: true, logger: console});
   server.start();
   const connection = new Connection(LOCALHOST);
   const amman = Amman.instance({
