@@ -161,7 +161,6 @@ export const MintNft = mutationField('mintNft', {
     }),
   },
   async resolve(_, args, ctx: YogaInitialContext) {
-    //TODO return 200 when metaplex fails confirmation
     const logger = LOGGER.withIdentifier();
     try {
       const connection = new Connection(process.env.RPC_ENDPOINT);
