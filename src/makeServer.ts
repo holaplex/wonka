@@ -7,11 +7,13 @@ const dirname = path.resolve();
 
 const PORT = parseInt(process.env!.PORT, 10);
 
-export const makeServer = (
-  port = PORT,
-  isDev = process.env.APP_ENV! === 'development',
-  logger?: YogaLogger,
-) => {
+interface ServerOptions {
+  port?: number;
+  isDev?: boolean;
+  logger?: YogaLogger;
+}
+
+export const makeServer = (options?: ServerOptions) => {
   const schema = makeSchema({
     types: [graphqlTypes],
     outputs: {
@@ -20,6 +22,7 @@ export const makeServer = (
     },
   });
 
+  const isDev = options?.isDev ?? process.env.APP_ENV! === 'development';
   const server = createServer({
     maskedErrors: {
       handleParseErrors: false,
@@ -27,9 +30,9 @@ export const makeServer = (
       isDev: isDev,
     },
     schema,
-    port: port,
+    port: options?.port ?? PORT,
     https: !isDev,
-    logging: !!logger ? logger : true,
+    logging: options?.logger ?? true,
   });
 
   return server;

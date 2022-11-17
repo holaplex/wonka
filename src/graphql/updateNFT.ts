@@ -1,6 +1,5 @@
 import { nonNull, mutationField, objectType, stringArg, arg } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
-import { getProcessLogger } from './utils';
 
 import {
   Connection,
@@ -9,7 +8,10 @@ import {
 } from '@solana/web3.js';
 
 import base58 from 'bs58';
-import { BundlrOptions, bundlrStorage, keypairIdentity, Metaplex, OperationOptions, UpdateNftInput, UpdateNftOutput } from '@metaplex-foundation/js';
+import { BundlrOptions, bundlrStorage, keypairIdentity, Metaplex, UpdateNftInput } from '@metaplex-foundation/js';
+import { WonkaLogger } from '../lib/helpers/logger';
+
+const LOGGER = WonkaLogger.with('updateNFT');
 
 export const UpdateNftResult = objectType({
   name: 'UpdateNftResult',
@@ -62,22 +64,24 @@ export const UpdateNft = mutationField('updateNft', {
     ),
   },
   async resolve(_, args, ctx: YogaInitialContext) {
-    const { logger, processId } = await getProcessLogger();
+    const logger = LOGGER.withIdentifier();
 
     const fail = (message: string, newUri?: string) => {
+      logger.error(`Failed to update NFT with error: ${message}`);
       return {
         success: false,
         message: message,
-        processId: processId,
+        processId: logger.id,
         newUri: newUri,
       };
     };
 
     const success = (message: string, newUri?: string) => {
+      logger.error(`Updated NFT successfully. New URI: ${newUri}`);
       return {
         success: true,
         message: message,
-        processId: processId,
+        processId: logger.id,
         newUri: newUri,
       };
     };
@@ -144,12 +148,7 @@ export const UpdateNft = mutationField('updateNft', {
         return fail('updated nft did not have newUri', newUri);
       }
     } catch (e) {
-      let message = 'Unknown Error';
-      if (e instanceof Error) {
-        message = e.message;
-      }
-      logger.error(message);
-      return fail(message, newUri);
+      return fail('Unhandled exception updating NFT.', newUri);
     }
   },
 });
