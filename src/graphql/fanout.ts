@@ -9,10 +9,13 @@ import {
 } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
 import { FanoutClient, MembershipModel } from '@glasseaters/hydra-sdk';
-import { Connection, clusterApiUrl, Keypair, PublicKey } from '@solana/web3.js';
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { NATIVE_MINT } from '@solana/spl-token';
 import { Wallet } from '@project-serum/anchor';
 import base58 from 'bs58';
+import { WonkaLogger } from '../lib/helpers/logger';
+
+const LOGGER = WonkaLogger.with('fanout');
 
 interface FanoutMember {
   publicKey: string;
@@ -102,119 +105,136 @@ export const CreateFanout = mutationField('createFanout', {
     }),
   },
   async resolve(_, args, ctx: YogaInitialContext) {
-    let authorityWallet: Wallet = null!;
-    const connection = new Connection(process.env.RPC_ENDPOINT, 'confirmed');
-    let fanoutSdk: FanoutClient;
-    let splFanoutResult: {
-      splTokenAddress: PublicKey;
-      splTokenWallet: PublicKey;
-    }[] = [];
+    const logger = LOGGER.withIdentifier();
 
-    const keyPairBytes = base58.decode(args.keyPair);
-
-    // Get create wallet from the client secrets
     try {
-      authorityWallet = new Wallet(
-        Keypair.fromSecretKey(Uint8Array.from(keyPairBytes)),
-      );
-    } catch (e) {
-      return {
-        message: `Error creating wallet from client secret: ${e.message}`,
-      };
-    }
+      let authorityWallet: Wallet = null!;
+      const connection = new Connection(process.env.RPC_ENDPOINT, 'confirmed');
+      let fanoutSdk: FanoutClient;
+      let splFanoutResult: {
+        splTokenAddress: PublicKey;
+        splTokenWallet: PublicKey;
+      }[] = [];
 
-    // Removes duplicates
-    const uniqueMembers = [
-      ...new Map(
-        args.members.map((item) => [item['publicKey'], item]),
-      ).values(),
-    ];
+      const keyPairBytes = base58.decode(args.keyPair);
 
-    // Make sure all members are valid
-    if (
-      uniqueMembers.filter((m: FanoutMember) => new PublicKey(m.publicKey))
-        .length !== uniqueMembers.length
-    ) {
-      return {
-        message: 'Invalid public key',
-      };
-    }
-
-    const totalShares = uniqueMembers.reduce(
-      (partialSum, a: any) => partialSum + a.shares,
-      0,
-    ) as number;
-    fanoutSdk = new FanoutClient(connection, authorityWallet);
-    let init: null | {
-      fanout: PublicKey;
-      nativeAccount: PublicKey;
-    } = null;
-    try {
-      init = await fanoutSdk.initializeFanout({
-        totalShares,
-        name: args.name,
-        membershipModel: MembershipModel.Wallet, // TODO: support other membership models
-      });
-    } catch (e) {
-      return {
-        message: `Error initializing fanout: ${e.message}`,
-      };
-    }
-
-    if (args.splTokenAddresses) {
-      for (var i = 0; i < args.splTokenAddresses.length; i++) {
-        try {
-          const { fanoutForMint, tokenAccount } =
-            await fanoutSdk.initializeFanoutForMint({
-              fanout: init.fanout,
-              mint: new PublicKey(args.splTokenAddresses[i]),
-            });
-          splFanoutResult.push({
-            splTokenAddress: new PublicKey(args.splTokenAddresses[i]),
-            splTokenWallet: tokenAccount,
-          });
-        } catch (e) {
-          return {
-            message: `Error initializing fanout for mint: ${e.message}`,
-          };
-        }
-      }
-    }
-
-    // TODO
-    // should get all promises in array, then do promise.all, check for errors
-    uniqueMembers.map(async (member: FanoutMember) => {
+      // Get create wallet from the client secrets
       try {
-        await fanoutSdk.addMemberWallet({
-          fanout: init.fanout,
-          fanoutNativeAccount: init.nativeAccount,
-          membershipKey: new PublicKey(member.publicKey),
-          shares: member.shares,
+        authorityWallet = new Wallet(
+          Keypair.fromSecretKey(Uint8Array.from(keyPairBytes)),
+        );
+      } catch (e) {
+        logger.error('Error creating wallet from client secret', e);
+        return {
+          message: `Error creating wallet from client secret: ${e.message}`,
+        };
+      }
+
+      // Removes duplicates
+      const uniqueMembers = [
+        ...new Map(
+          args.members.map((item) => [item['publicKey'], item]),
+        ).values(),
+      ];
+
+      // Make sure all members are valid
+      if (
+        uniqueMembers.filter((m: FanoutMember) => new PublicKey(m.publicKey))
+          .length !== uniqueMembers.length
+      ) {
+        logger.error('Invalid public key');
+        return {
+          message: 'Invalid public key',
+        };
+      }
+
+      const totalShares = uniqueMembers.reduce(
+        (partialSum, a: any) => partialSum + a.shares,
+        0,
+      ) as number;
+      fanoutSdk = new FanoutClient(connection, authorityWallet);
+      let init: null | {
+        fanout: PublicKey;
+        nativeAccount: PublicKey;
+      } = null;
+      try {
+        init = await fanoutSdk.initializeFanout({
+          totalShares,
+          name: args.name,
+          membershipModel: MembershipModel.Wallet, // TODO: support other membership models
         });
       } catch (e) {
+        logger.error('Error initializing fanout', e);
         return {
-          message: `Error adding member: ${e.message}`,
+          message: `Error initializing fanout: ${e.message}`,
         };
       }
-    });
 
-    // Return the details of the operation
-    if (args.splTokenAddresses) {
-      if (args.splTokenAddresses.length > 0) {
-        return {
-          message: 'Successfully created wallet',
-          fanoutPublicKey: init.fanout.toBase58(),
-          solanaWalletAddress: init.nativeAccount.toBase58(),
-          splFanout: splFanoutResult,
-        };
+      if (args.splTokenAddresses) {
+        for (var i = 0; i < args.splTokenAddresses.length; i++) {
+          try {
+            const { fanoutForMint, tokenAccount } =
+              await fanoutSdk.initializeFanoutForMint({
+                fanout: init.fanout,
+                mint: new PublicKey(args.splTokenAddresses[i]),
+              });
+            splFanoutResult.push({
+              splTokenAddress: new PublicKey(args.splTokenAddresses[i]),
+              splTokenWallet: tokenAccount,
+            });
+          } catch (e) {
+            logger.error('Error initializing fanout for mint', e);
+            return {
+              message: `Error initializing fanout for mint: ${e.message}`,
+            };
+          }
+        }
       }
+
+      // TODO
+      // should get all promises in array, then do promise.all, check for errors
+      uniqueMembers.map(async (member: FanoutMember) => {
+        try {
+          await fanoutSdk.addMemberWallet({
+            fanout: init.fanout,
+            fanoutNativeAccount: init.nativeAccount,
+            membershipKey: new PublicKey(member.publicKey),
+            shares: member.shares,
+          });
+        } catch (e) {
+          logger.error('Error adding member', e);
+          return {
+            message: `Error adding member: ${e.message}`,
+          };
+        }
+      });
+
+      // Return the details of the operation
+      if (args.splTokenAddresses) {
+        if (args.splTokenAddresses.length > 0) {
+          const result = {
+            message: 'Successfully created wallet',
+            fanoutPublicKey: init.fanout.toBase58(),
+            solanaWalletAddress: init.nativeAccount.toBase58(),
+            splFanout: splFanoutResult,
+          }
+          logger.info(JSON.stringify(result));
+          return result;
+        }
+      }
+
+      const result = {
+        message: 'Successfully created wallet',
+        fanoutPublicKey: init.fanout.toBase58(),
+        solanaWalletAddress: init.nativeAccount.toBase58(),
+      }
+      logger.info(JSON.stringify(result))
+      return result;
+
+    } catch (e) {
+      logger.error("Unhandled exception in createFanout", e);
+      throw e;
     }
-
-    return {
-      message: 'Successfully created wallet',
-      fanoutPublicKey: init.fanout.toBase58(),
-      solanaWalletAddress: init.nativeAccount.toBase58(),
-    };
   },
 });
 
@@ -238,75 +258,89 @@ export const DisperseFanout = mutationField('disperseFanout', {
     }),
   },
   async resolve(_, args, ctx: YogaInitialContext) {
-    let payerWallet: Wallet = null!;
-    const connection = new Connection(process.env.RPC_ENDPOINT, 'confirmed');
-    let fanoutSdk: FanoutClient;
+    const logger = LOGGER.withIdentifier();
 
-    // Load up that keypair
-    const keyPairBytes = base58.decode(args.keyPair);
-
-    // Try to make the wallet
     try {
-      payerWallet = new Wallet(
-        Keypair.fromSecretKey(Uint8Array.from(keyPairBytes)),
-      );
-    } catch (e) {
-      return {
-        message: `Error creating wallet from client secret: ${e.message}`,
-      };
-    }
+      let payerWallet: Wallet = null!;
+      const connection = new Connection(process.env.RPC_ENDPOINT, 'confirmed');
+      let fanoutSdk: FanoutClient;
 
-    // Verify fanout is legit
-    try {
-      new PublicKey(args.fanoutPublicKey);
-    } catch (e) {
-      return {
-        message: `Error creating pubkey from fanout address: ${e.message}`,
-      };
-    }
+      // Load up that keypair
+      const keyPairBytes = base58.decode(args.keyPair);
 
-    fanoutSdk = new FanoutClient(connection, payerWallet);
+      // Try to make the wallet
+      try {
+        payerWallet = new Wallet(
+          Keypair.fromSecretKey(Uint8Array.from(keyPairBytes)),
+        );
+      } catch (e) {
+        logger.error('Error creating wallet from client secret', e);
+        return {
+          message: `Error creating wallet from client secret: ${e.message}`,
+        };
+      }
 
-    // For each SPL token provided verify it's valid and distribute funds
-    if (args.splTokenAddresses) {
-      for (var i = 0; i < args.splTokenAddresses.length; i++) {
-        try {
-          new PublicKey(args.splTokenAddresses[i]);
-        } catch (e) {
-          return {
-            message: `Error creating publickey from splTokenAddress: ${e.message}`,
-          };
+      // Verify fanout is legit
+      try {
+        new PublicKey(args.fanoutPublicKey);
+      } catch (e) {
+        logger.error('Error creating pubkey from fanout address', e);
+        return {
+          message: `Error creating pubkey from fanout address: ${e.message}`,
+        };
+      }
+
+      fanoutSdk = new FanoutClient(connection, payerWallet);
+
+      // For each SPL token provided verify it's valid and distribute funds
+      if (args.splTokenAddresses) {
+        for (var i = 0; i < args.splTokenAddresses.length; i++) {
+          try {
+            new PublicKey(args.splTokenAddresses[i]);
+          } catch (e) {
+            logger.error('Error creating publickey from splTokenAddress', e);
+            return {
+              message: `Error creating publickey from splTokenAddress: ${e.message}`,
+            };
+          }
+
+          try {
+            await fanoutSdk.distributeAll({
+              fanout: new PublicKey(args.fanoutPublicKey),
+              payer: payerWallet.publicKey,
+              mint: new PublicKey(args.splTokenAddresses[i]),
+            });
+          } catch (e) {
+            logger.error('Error dispersing funds', e);
+            return {
+              message: `Error dispersing funds: ${e.name} - ${e.message}`,
+            };
+          }
         }
-
+        // If no SPL tokens listed, assume SOL only distribution
+      } else {
         try {
           await fanoutSdk.distributeAll({
             fanout: new PublicKey(args.fanoutPublicKey),
             payer: payerWallet.publicKey,
-            mint: new PublicKey(args.splTokenAddresses[i]),
+            mint: NATIVE_MINT,
           });
         } catch (e) {
+          logger.error('Error dispersing funds', e);
           return {
-            message: `Error dispersing funds: ${e.name} - ${e.message}`,
+            message: `Error dispersing funds: ${e.message}`,
           };
         }
       }
-      // If no SPL tokens listed, assume SOL only distribution
-    } else {
-      try {
-        await fanoutSdk.distributeAll({
-          fanout: new PublicKey(args.fanoutPublicKey),
-          payer: payerWallet.publicKey,
-          mint: NATIVE_MINT,
-        });
-      } catch (e) {
-        return {
-          message: `Error dispersing funds: ${e.message}`,
-        };
-      }
-    }
 
-    return {
-      message: 'Disperse fanout successful',
-    };
+      logger.info('Disperse fanout successful');
+      return {
+        message: 'Disperse fanout successful',
+      };
+
+    } catch (e) {
+      logger.error('Unhandled error in disperseFanout', e);
+      throw e;
+    }
   },
 });

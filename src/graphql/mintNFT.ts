@@ -8,21 +8,22 @@ import {
   scalarType,
 } from 'nexus';
 import { YogaInitialContext } from 'graphql-yoga';
-
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import base58 from 'bs58';
 import {
   UploadMetadataOutput,
-  Nft,
   CreateNftOutput,
   Metaplex,
   keypairIdentity,
   CreateNftInput,
 } from '@metaplex-foundation/js';
+import { WonkaLogger } from '../lib/helpers/logger';
+
+const LOGGER: WonkaLogger = WonkaLogger.with('mintNft');
 
 export const MintNftResult = objectType({
   name: 'MintNftResult',
-  description: 'The result for minting a NFT',
+  description: 'The result for minting an NFT',
   definition(t) {
     t.nonNull.string('message', {
       description: 'Mint hash of newly minted NFT',
@@ -160,85 +161,100 @@ export const MintNft = mutationField('mintNft', {
     }),
   },
   async resolve(_, args, ctx: YogaInitialContext) {
-    const connection = new Connection(process.env.RPC_ENDPOINT);
-    let uri: UploadMetadataOutput = null!;
-    let wallet: Keypair | null = null;
-
-    let mintToPubkey: PublicKey | null = null;
+    const logger = LOGGER.withIdentifier();
     try {
-      if (args.mintToAddress) {
-        mintToPubkey = new PublicKey(args.mintToAddress!);
-      }
-    } catch (e) {
-      return {
-        message: `Error parsing mint to Address: ${e.message}`,
-      };
-    }
+      const connection = new Connection(process.env.RPC_ENDPOINT);
+      let uri: UploadMetadataOutput = null!;
+      let wallet: Keypair | null = null;
 
-    const bytes = base58.decode(args.keyPair);
-
-    // Get create wallet from the client secrets
-    try {
-      wallet = Keypair.fromSecretKey(bytes);
-    } catch (e) {
-      return {
-        message: `Error creating wallet from client secret: ${e.message}`,
-      };
-    }
-
-    // Get a new metaplex object
-    const metaplex = new Metaplex(connection).use(keypairIdentity(wallet));
-
-    // Upload NFT Metadata, use metadata from api call, assume NFT Standard format
-    try {
-      if (args.nftMetadata) {
-        uri = await metaplex.nfts().uploadMetadata(args.nftMetadata);
-      } else if (args.nftMetadataJSON) {
-        try {
-          const metadata = await args.nftMetadataJSON.text();
-          const metadataJSON = JSON.parse(metadata);
-          uri = await metaplex.nfts().uploadMetadata(metadataJSON);
-        } catch (e) {
-          return {
-            message: `Error uploading NFT metadata: ${e.message}`,
-          };
+      let mintToPubkey: PublicKey | null = null;
+      try {
+        if (args.mintToAddress) {
+          mintToPubkey = new PublicKey(args.mintToAddress!);
         }
-      } else {
-        throw new Error('No NFT Metadata provided');
+      } catch (e) {
+        logger.error('Invalid mint-to address', e);
+        return {
+          message: `Error parsing mint to Address: ${e.message}`,
+        };
       }
-    } catch (e) {
-      return {
-        message: `Error uploading metadata: ${e.message}`,
+
+      const bytes = base58.decode(args.keyPair);
+
+      // Get create wallet from the client secrets
+      try {
+        wallet = Keypair.fromSecretKey(bytes);
+      } catch (e) {
+        logger.error('Error creating wallet from client secret', e);
+        return {
+          message: `Error creating wallet from client secret: ${e.message}`,
+        };
+      }
+
+      // Get a new metaplex object
+      const metaplex = new Metaplex(connection).use(keypairIdentity(wallet));
+
+      // Upload NFT Metadata, use metadata from api call, assume NFT Standard format
+      try {
+        if (args.nftMetadata) {
+          uri = await metaplex.nfts().uploadMetadata(args.nftMetadata);
+        } else if (args.nftMetadataJSON) {
+          try {
+            const metadata = await args.nftMetadataJSON.text();
+            const metadataJSON = JSON.parse(metadata);
+            uri = await metaplex.nfts().uploadMetadata(metadataJSON);
+          } catch (e) {
+            return {
+              message: `Error uploading NFT metadata: ${e.message}`,
+            };
+          }
+        } else {
+          throw new Error('No NFT Metadata provided');
+        }
+      } catch (e) {
+        logger.error('Error uploading metadata', e);
+        return {
+          message: `Error uploading metadata: ${e.message}`,
+        };
+      }
+
+      const uploadMetadataOutput: UploadMetadataOutput = uri;
+      const createNftInput: CreateNftInput = {
+        ...uploadMetadataOutput.metadata,
+        uri: uploadMetadataOutput.uri,
+        sellerFeeBasisPoints:
+          uploadMetadataOutput.metadata.seller_fee_basis_points,
+        name: uploadMetadataOutput.metadata.name,
+        collection: null,
+        isMutable: args.isMutable ?? true,
       };
-    }
 
-    const uploadMetadataOutput: UploadMetadataOutput = uri;
-    const createNftInput: CreateNftInput = {
-      ...uploadMetadataOutput.metadata,
-      uri: uploadMetadataOutput.uri,
-      sellerFeeBasisPoints:
-        uploadMetadataOutput.metadata.seller_fee_basis_points,
-      name: uploadMetadataOutput.metadata.name,
-      collection: null,
-      isMutable: args.isMutable ?? true,
-    };
+      if (mintToPubkey) {
+        // if mintTo arg is provided, we want the NFT owner to be that address instead of being owned by the mint.
+        createNftInput.tokenOwner = mintToPubkey;
+      }
 
-    if (mintToPubkey) {
-      // if mintTo arg is provided, we want the NFT owner to be that address instead of being owned by the mint.
-      createNftInput.tokenOwner = mintToPubkey;
-    }
+      let nft: CreateNftOutput = null!;
+      // Create New NFT with the metadata
+      try {
+        nft = await metaplex.nfts().create(createNftInput);
 
-    let nft: CreateNftOutput = null!;
-    // Create New NFT with the metadata
-    try {
-      nft = await metaplex.nfts().create(createNftInput);
+      } catch (e) {
+        logger.error('Error creating NFT', e);
+        return {
+          message: `Error creating NFT: ${e.message}`
+        }
+      }
+
+      // Return the NFT mint address
+      const mintAddressString: string = nft.nft.mint.address.toBase58();
+      logger.info(`NFT created successfully with mint address ${mintAddressString}`);
+      return {
+        message: mintAddressString,
+      };
     } catch (e) {
-      return fail(`Error creating NFT: ${e.message}`);
+      logger.error("Unhandled error in mintNft", e);
+      throw e;
     }
-
-    // Return the NFT mint address
-    return {
-      message: nft.nft.mint.address.toBase58(),
-    };
   },
 });
